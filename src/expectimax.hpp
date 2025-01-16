@@ -25,8 +25,11 @@ class Node {
 	void apply_shoot_dealer_blank(void);
 	void apply_shoot_player_live(void);
 	void apply_shoot_player_blank(void);
-	void remove_dealer_item_action(int item_action_idx);
-	void remove_player_item_action(int item_action_idx);
+    void apply_drink_beer_live(void);
+    void apply_drink_beer_blank(void);
+    void apply_smoke_cigarette(void);
+    void apply_magnify_live(void);
+    void apply_magnify_blank(void);
 
    private:
 	float expectimax(void) const;
@@ -38,6 +41,9 @@ class Node {
 	float drink_beer(float item_pickup_probability, int item_action_idx) const;
 	float smoke_cigarette(float item_pickup_probability, int item_action_idx) const;
 	float use_magnifying_glass(float item_pickup_probability, int item_action_idx) const;
+    int find_item_action_idx(Action item_action) const;
+    void remove_dealer_item_action(int item_action_idx);
+    void remove_player_item_action(int item_action_idx);
 
 	friend float eval_expectimax_performance(int sim_count, uint8_t live_round_count,
 	                                         uint8_t blank_round_count, uint8_t max_lives,
