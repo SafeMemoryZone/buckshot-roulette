@@ -6,18 +6,159 @@
 
 Node::Node(bool is_dealer_turn, bool curr_is_live, bool curr_is_blank, uint8_t live_round_count,
            uint8_t blank_round_count, uint8_t max_lives, uint8_t dealer_lives, uint8_t player_lives,
-           const std::vector<Action> &available_dealer_item_actions,
-           const std::vector<Action> &available_player_item_actions) {
-	this->is_dealer_turn = is_dealer_turn;
-	this->curr_is_live = curr_is_live;
-	this->curr_is_blank = curr_is_blank;
-	this->live_round_count = live_round_count;
-	this->blank_round_count = blank_round_count;
-	this->max_lives = max_lives;
-	this->dealer_lives = dealer_lives;
-	this->player_lives = player_lives;
-	this->available_dealer_item_actions = available_dealer_item_actions;
-	this->available_player_item_actions = available_player_item_actions;
+           ItemManager dealer_items, ItemManager player_items)
+    : is_dealer_turn(is_dealer_turn),
+      curr_is_live(curr_is_live),
+      curr_is_blank(curr_is_blank),
+      live_round_count(live_round_count),
+      blank_round_count(blank_round_count),
+      max_lives(max_lives),
+      dealer_lives(dealer_lives),
+      player_lives(player_lives),
+      dealer_items(dealer_items),
+      player_items(player_items) {}
+
+void Node::apply_shoot_dealer_live(void) {
+	this->dealer_lives--;
+	this->live_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+	this->is_dealer_turn = !this->is_dealer_turn;
+}
+
+void Node::apply_shoot_dealer_blank(void) {
+	this->blank_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+	this->is_dealer_turn = true;
+}
+
+void Node::apply_shoot_player_live(void) {
+	this->player_lives--;
+	this->live_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+	this->is_dealer_turn = !this->is_dealer_turn;
+}
+
+void Node::apply_shoot_player_blank(void) {
+	this->blank_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+	this->is_dealer_turn = false;
+}
+
+void Node::apply_drink_beer_live(void) {
+	this->live_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_beer();
+	}
+	else {
+		this->player_items.remove_beer();
+	}
+}
+
+void Node::apply_drink_beer_blank(void) {
+	this->blank_round_count--;
+	this->curr_is_live = false;
+	this->curr_is_blank = false;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_beer();
+	}
+	else {
+		this->player_items.remove_beer();
+	}
+}
+
+void Node::apply_smoke_cigarette(void) {
+	if (this->is_dealer_turn) {
+		assert(this->dealer_lives < this->max_lives);
+		this->dealer_lives++;
+		this->dealer_items.remove_cigarette_pack();
+	}
+	else {
+		assert(this->dealer_lives < this->max_lives);
+		this->player_lives++;
+		this->player_items.remove_cigarette_pack();
+	}
+}
+
+void Node::apply_magnify_live(void) {
+	this->curr_is_live = true;
+	this->curr_is_blank = false;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_magnifying_glass();
+	}
+	else {
+		this->player_items.remove_magnifying_glass();
+	}
+}
+
+void Node::apply_magnify_blank(void) {
+	this->curr_is_live = false;
+	this->curr_is_blank = true;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_magnifying_glass();
+	}
+	else {
+		this->player_items.remove_magnifying_glass();
+	}
+}
+
+std::array<Node, 4> Node::get_states_after_shoot(void) const {
+	Node shoot_dealer_live = *this;
+	Node shoot_player_live = *this;
+	Node shoot_dealer_blank = *this;
+	Node shoot_player_blank = *this;
+
+	shoot_dealer_live.apply_shoot_dealer_live();
+	shoot_player_live.apply_shoot_player_live();
+	shoot_dealer_blank.apply_shoot_dealer_blank();
+	shoot_player_blank.apply_shoot_player_blank();
+
+	return {shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live};
+}
+
+float Node::calc_drink_beer_ev(float item_pickup_probability) const {
+	const float probability_live = static_cast<float>(this->live_round_count) /
+	                               (this->live_round_count + this->blank_round_count);
+	const float probability_blank = 1.0f - probability_live;
+
+	Node eject_live = *this;
+	Node eject_blank = *this;
+
+	eject_live.apply_drink_beer_live();
+	eject_blank.apply_drink_beer_blank();
+
+	return eject_live.expectimax() * probability_live * item_pickup_probability +
+	       eject_blank.expectimax() * probability_blank * item_pickup_probability;
+}
+
+float Node::calc_smoke_cigarette_ev(float item_pickup_probability) const {
+	Node smoked = *this;
+	smoked.apply_smoke_cigarette();
+	return smoked.expectimax() * item_pickup_probability;
+}
+
+float Node::calc_use_magnifying_glass_ev(float item_pickup_probability) const {
+	const float probability_live = static_cast<float>(this->live_round_count) /
+	                               (this->live_round_count + this->blank_round_count);
+	const float probability_blank = 1.0f - probability_live;
+
+	Node magnify_live = *this;
+	Node magnify_blank = *this;
+
+	magnify_live.apply_magnify_live();
+	magnify_blank.apply_magnify_blank();
+
+	return magnify_live.expectimax() * probability_live * item_pickup_probability +
+	       magnify_blank.expectimax() * probability_blank * item_pickup_probability;
 }
 
 bool Node::is_only_live_rounds(void) const {
@@ -37,18 +178,6 @@ bool Node::is_terminal(void) const {
 	       (this->live_round_count + this->blank_round_count) == 0;
 }
 
-void Node::remove_dealer_item_action(int item_action_idx) {
-	this->available_dealer_item_actions.at(item_action_idx) =
-	    this->available_dealer_item_actions.back();
-	this->available_dealer_item_actions.pop_back();
-}
-
-void Node::remove_player_item_action(int item_action_idx) {
-	this->available_player_item_actions.at(item_action_idx) =
-	    this->available_player_item_actions.back();
-	this->available_player_item_actions.pop_back();
-}
-
 float Node::eval(void) const {
 	// TODO: Improve eval
 
@@ -63,44 +192,19 @@ float Node::eval(void) const {
 	return (this->player_lives - this->dealer_lives) * 10;
 }
 
-std::array<Node, 4> Node::get_states_after_shoot(void) const {
-	Node shoot_dealer_blank(true, false, false, this->live_round_count,
-	                        static_cast<uint8_t>(this->blank_round_count - 1), this->max_lives,
-	                        this->dealer_lives, this->player_lives,
-	                        this->available_dealer_item_actions,
-	                        this->available_player_item_actions);
-	Node shoot_dealer_live(
-	    !this->is_dealer_turn, false, false, static_cast<uint8_t>(this->live_round_count - 1),
-	    this->blank_round_count, this->max_lives, static_cast<uint8_t>(this->dealer_lives - 1),
-	    this->player_lives, this->available_dealer_item_actions,
-	    this->available_player_item_actions);
-	Node shoot_player_blank(false, false, false, this->live_round_count,
-	                        static_cast<uint8_t>(this->blank_round_count - 1), this->max_lives,
-	                        this->dealer_lives, this->player_lives,
-	                        this->available_dealer_item_actions,
-	                        this->available_player_item_actions);
-	Node shoot_player_live(
-	    !this->is_dealer_turn, false, false, static_cast<uint8_t>(this->live_round_count - 1),
-	    this->blank_round_count, this->max_lives, this->dealer_lives,
-	    static_cast<uint8_t>(this->player_lives - 1), this->available_dealer_item_actions,
-	    this->available_player_item_actions);
-
-	return {shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live};
-}
-
 float Node::expectimax(void) const {
 	if (this->is_terminal()) {
 		return this->eval();
 	}
 
-	auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
-	    this->get_states_after_shoot();
 	const float probability_live = static_cast<float>(this->live_round_count) /
 	                               (this->live_round_count + this->blank_round_count);
 	const float probability_blank = 1.0f - probability_live;
+	auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
+	    this->get_states_after_shoot();
 
 	if (this->is_dealer_turn) {
-		const float item_pickup_probability = 1.0f / this->available_dealer_item_actions.size();
+		const float item_pickup_probability = 1.0f / this->dealer_items.get_item_count();
 		/*
 		 * The dealer AI acts as follows:
 		 * - It always knows the last round type and acts accordingly
@@ -114,38 +218,24 @@ float Node::expectimax(void) const {
 		 * one
 		 */
 
-		bool chose_action = false;
+		bool chose_item = false;
 		float ev_after_item_usage = 0.0f;
 
-		for (int item_action_idx = 0; item_action_idx < this->available_dealer_item_actions.size();
-		     item_action_idx++) {
-			const Action item_action = this->available_dealer_item_actions.at(item_action_idx);
-
-			switch (item_action) {
-				case Action::DRINK_BEER:
-					if (this->curr_is_live || this->is_last_round()) break;
-					ev_after_item_usage +=
-					    this->drink_beer(item_pickup_probability, item_action_idx);
-					chose_action = true;
-					break;
-				case Action::SMOKE_CIGARETTE:
-					if (this->dealer_lives == this->max_lives) break;
-					ev_after_item_usage +=
-					    this->smoke_cigarette(item_pickup_probability, item_action_idx);
-					chose_action = true;
-					break;
-				case Action::USE_MAGNIFYING_GLASS:
-					if (this->curr_is_live || this->curr_is_blank || this->is_last_round()) break;
-					ev_after_item_usage +=
-					    this->use_magnifying_glass(item_pickup_probability, item_action_idx);
-					chose_action = true;
-					break;
-				default:
-					assert(false && "invalid item action");
-			}
+		if (this->dealer_items.has_beer() && !this->curr_is_live && !this->is_last_round()) {
+			ev_after_item_usage += this->calc_drink_beer_ev(item_pickup_probability);
+			chose_item = true;
+		}
+		if (this->dealer_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+			ev_after_item_usage += this->calc_smoke_cigarette_ev(item_pickup_probability);
+			chose_item = true;
+		}
+		if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live &&
+		    !this->curr_is_blank && !this->is_last_round()) {
+			ev_after_item_usage += this->calc_use_magnifying_glass_ev(item_pickup_probability);
+			chose_item = true;
 		}
 
-		if (chose_action) {
+		if (chose_item) {
 			return ev_after_item_usage;
 		}
 
@@ -173,28 +263,15 @@ float Node::expectimax(void) const {
 
 	float best_ev = std::numeric_limits<float>::lowest();
 
-	for (int item_action_idx = 0; item_action_idx < this->available_player_item_actions.size();
-	     item_action_idx++) {
-		const Action item_action = this->available_player_item_actions.at(item_action_idx);
-		switch (item_action) {
-			case Action::DRINK_BEER:
-				if (this->curr_is_live || this->curr_is_blank || this->is_only_blank_rounds())
-					break;
-				best_ev = std::max(this->drink_beer(1.0f, item_action_idx), best_ev);
-				break;
-			case Action::SMOKE_CIGARETTE:
-				if (this->player_lives == this->max_lives) break;
-				best_ev = std::max(this->smoke_cigarette(1.0f, item_action_idx), best_ev);
-				break;
-			case Action::USE_MAGNIFYING_GLASS:
-				if (this->curr_is_live || this->curr_is_blank || this->is_only_live_rounds() ||
-				    this->is_only_blank_rounds())
-					break;
-				best_ev = std::max(this->use_magnifying_glass(1.0f, item_action_idx), best_ev);
-				break;
-			default:
-				assert(false && "invalid item action");
-		}
+	if (this->dealer_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
+		best_ev = std::max(this->calc_drink_beer_ev(1.0f), best_ev);
+	}
+	if (this->dealer_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+		best_ev = std::max(this->calc_smoke_cigarette_ev(1.0f), best_ev);
+	}
+	if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
+	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
+		best_ev = std::max(this->calc_use_magnifying_glass_ev(1.0f), best_ev);
 	}
 
 	if (this->is_only_live_rounds()) {
@@ -215,122 +292,9 @@ float Node::expectimax(void) const {
 	return best_ev;
 }
 
-float Node::drink_beer(float item_pickup_probability, int item_action_idx) const {
-	const float probability_live = static_cast<float>(this->live_round_count) /
-	                               (this->live_round_count + this->blank_round_count);
-	const float probability_blank = 1.0f - probability_live;
-
-	if (this->is_only_live_rounds()) {
-		Node eject_live(this->is_dealer_turn, false, false,
-		                static_cast<uint8_t>(this->live_round_count - 1), this->blank_round_count,
-		                this->max_lives, this->dealer_lives, this->player_lives,
-		                this->available_dealer_item_actions, this->available_player_item_actions);
-
-		if (this->is_dealer_turn) {
-			eject_live.remove_dealer_item_action(item_action_idx);
-		}
-		else {
-			eject_live.remove_player_item_action(item_action_idx);
-		}
-
-		return eject_live.expectimax() * item_pickup_probability;
-	}
-	if (this->is_only_blank_rounds()) {
-		Node eject_blank(this->is_dealer_turn, false, false, this->live_round_count,
-		                 static_cast<uint8_t>(this->blank_round_count - 1), this->max_lives,
-		                 this->dealer_lives, this->player_lives,
-		                 this->available_dealer_item_actions, this->available_player_item_actions);
-
-		if (this->is_dealer_turn) {
-			eject_blank.remove_dealer_item_action(item_action_idx);
-		}
-		else {
-			eject_blank.remove_player_item_action(item_action_idx);
-		}
-
-		return eject_blank.expectimax() * item_pickup_probability;
-	}
-
-	Node eject_live(this->is_dealer_turn, false, false,
-	                static_cast<uint8_t>(this->live_round_count - 1), this->blank_round_count,
-	                this->max_lives, this->dealer_lives, this->player_lives,
-	                this->available_dealer_item_actions, this->available_player_item_actions);
-
-	if (this->is_dealer_turn) {
-		eject_live.remove_dealer_item_action(item_action_idx);
-	}
-	else {
-		eject_live.remove_player_item_action(item_action_idx);
-	}
-
-	Node eject_blank(this->is_dealer_turn, false, false, this->live_round_count,
-	                 static_cast<uint8_t>(this->blank_round_count - 1), this->max_lives,
-	                 this->dealer_lives, this->player_lives, this->available_dealer_item_actions,
-	                 this->available_player_item_actions);
-
-	if (this->is_dealer_turn) {
-		eject_blank.remove_dealer_item_action(item_action_idx);
-	}
-	else {
-		eject_blank.remove_player_item_action(item_action_idx);
-	}
-
-	return eject_live.expectimax() * item_pickup_probability * probability_live +
-	       eject_blank.expectimax() * item_pickup_probability * probability_blank;
-}
-
-float Node::smoke_cigarette(float item_pickup_probability, int item_action_idx) const {
-	Node smoked(
-	    this->is_dealer_turn, false, false, this->live_round_count, this->blank_round_count,
-	    this->max_lives,
-	    this->is_dealer_turn ? static_cast<uint8_t>(this->dealer_lives + 1) : this->dealer_lives,
-	    !this->is_dealer_turn ? static_cast<uint8_t>(this->player_lives + 1) : this->player_lives,
-	    this->available_dealer_item_actions, this->available_player_item_actions);
-
-	if (this->is_dealer_turn) {
-		smoked.remove_dealer_item_action(item_action_idx);
-	}
-	else {
-		smoked.remove_player_item_action(item_action_idx);
-	}
-
-	return smoked.expectimax() * item_pickup_probability;
-}
-
-float Node::use_magnifying_glass(float item_pickup_probability, int item_action_idx) const {
-	const float probability_live = static_cast<float>(this->live_round_count) /
-	                               (this->live_round_count + this->blank_round_count);
-	const float probability_blank = 1.0f - probability_live;
-
-	Node see_live(this->is_dealer_turn, true, false, this->live_round_count,
-	              this->blank_round_count, this->max_lives, this->dealer_lives, this->player_lives,
-	              this->available_dealer_item_actions, this->available_player_item_actions);
-
-	if (this->is_dealer_turn) {
-		see_live.remove_dealer_item_action(item_action_idx);
-	}
-	else {
-		see_live.remove_player_item_action(item_action_idx);
-	}
-
-	Node see_blank(this->is_dealer_turn, false, true, this->live_round_count,
-	               this->blank_round_count, this->max_lives, this->dealer_lives, this->player_lives,
-	               this->available_dealer_item_actions, this->available_player_item_actions);
-
-	if (this->is_dealer_turn) {
-		see_blank.remove_dealer_item_action(item_action_idx);
-	}
-	else {
-		see_blank.remove_player_item_action(item_action_idx);
-	}
-
-	return see_live.expectimax() * probability_live * item_pickup_probability +
-	       see_blank.expectimax() * probability_blank * item_pickup_probability;
-}
-
 std::pair<Action, float> Node::get_best_action(void) const {
 	float best_item_ev = std::numeric_limits<float>::lowest();
-	Action best_item_action = Action::SHOOT_DEALER;
+	Action best_action = Action::SHOOT_DEALER;
 
 	float shoot_player_ev = std::numeric_limits<float>::lowest();
 	float shoot_dealer_ev = std::numeric_limits<float>::lowest();
@@ -341,42 +305,26 @@ std::pair<Action, float> Node::get_best_action(void) const {
 	auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
 	    this->get_states_after_shoot();
 
-	for (int item_action_idx = 0; item_action_idx < this->available_player_item_actions.size();
-	     item_action_idx++) {
-		const Action item_action = this->available_player_item_actions.at(item_action_idx);
-
-		switch (item_action) {
-			case Action::DRINK_BEER: {
-				if (this->curr_is_blank || this->is_only_blank_rounds()) break;
-				const float ev = this->drink_beer(1.0f, item_action_idx);
-				if (ev > best_item_ev) {
-					best_item_ev = ev;
-					best_item_action = Action::DRINK_BEER;
-				}
-				break;
-			}
-			case Action::SMOKE_CIGARETTE: {
-				if (this->player_lives == this->max_lives) break;
-				const float ev = this->smoke_cigarette(1.0f, item_action_idx);
-				if (ev > best_item_ev) {
-					best_item_ev = ev;
-					best_item_action = Action::SMOKE_CIGARETTE;
-				}
-				break;
-			}
-			case Action::USE_MAGNIFYING_GLASS: {
-				if (this->curr_is_live || this->curr_is_blank || this->is_only_live_rounds() ||
-				    this->is_only_blank_rounds())
-					break;
-				const float ev = this->use_magnifying_glass(1.0f, item_action_idx);
-				if (ev > best_item_ev) {
-					best_item_ev = ev;
-					best_item_action = Action::USE_MAGNIFYING_GLASS;
-				}
-				break;
-			}
-			default:
-				assert(false && "invalid item action");
+	if (this->dealer_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
+		const float ev = this->calc_drink_beer_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::DRINK_BEER;
+		}
+	}
+	if (this->dealer_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+		const float ev = this->calc_smoke_cigarette_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::SMOKE_CIGARETTE;
+		}
+	}
+	if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
+	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
+		const float ev = this->calc_use_magnifying_glass_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::USE_MAGNIFYING_GLASS;
 		}
 	}
 
@@ -401,5 +349,5 @@ std::pair<Action, float> Node::get_best_action(void) const {
 		return std::pair<Action, float>(Action::SHOOT_PLAYER, shoot_player_ev);
 	}
 
-	return std::pair<Action, float>(best_item_action, best_item_ev);
+	return std::pair<Action, float>(best_action, best_item_ev);
 }
