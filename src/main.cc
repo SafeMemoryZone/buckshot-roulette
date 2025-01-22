@@ -2,8 +2,6 @@
 #include <iostream>
 #include <limits>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 #include "expectimax.hpp"
 
@@ -31,23 +29,22 @@ Args parse_cmd_args(int argc, char **argv) {
 	return args;
 }
 
-std::vector<Action> prompt_item_actions(std::string_view prompt) {
+ItemManager prompt_items(std::string_view prompt) {
 	std::cout << prompt << '\n';
 	std::string curr_line;
 	std::getline(std::cin, curr_line);
 
-	static const std::unordered_map<std::string, Action> action_map = {
-	    {"beer", Action::DRINK_BEER},
-	    {"cigarette", Action::SMOKE_CIGARETTE},
-	    {"magnifying glass", Action::USE_MAGNIFYING_GLASS}};
-
-	std::vector<Action> item_actions;
+	ItemManager items;
 
 	while (!curr_line.empty()) {
-		auto it = action_map.find(curr_line);
-		if (it != action_map.end()) {
-			item_actions.emplace_back(it->second);
-			if (item_actions.size() == 8) break;
+		if (curr_line == "beer") {
+			items.add_beer();
+		}
+		else if (curr_line == "cigarette") {
+			items.add_cigarette_pack();
+		}
+		else if (curr_line == "magnifying glass") {
+			items.add_magnifying_glass();
 		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
@@ -56,7 +53,7 @@ std::vector<Action> prompt_item_actions(std::string_view prompt) {
 		std::getline(std::cin, curr_line);
 	}
 
-	return item_actions;
+	return items;
 }
 
 template <typename... Args>
@@ -120,8 +117,8 @@ int main(int argc, char **argv) {
 		uint8_t blank_round_count = prompt_num(live_round_count > 0 ? 0 : 1, 8 - live_round_count,
 		                                       "[PROMPT] Enter blank round count (0-8): ");
 
-		std::vector<Action> dealer_items = prompt_item_actions("[PROMPT] Enter dealer items: ");
-		std::vector<Action> player_items = prompt_item_actions("[PROMPT] Enter player items: ");
+		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items: ");
+		ItemManager player_items = prompt_items("[PROMPT] Enter player items: ");
 
 		Node node(false, false, false, live_round_count, blank_round_count, max_lives, dealer_lives,
 		          player_lives, dealer_items, player_items);

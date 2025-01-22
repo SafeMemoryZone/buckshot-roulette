@@ -87,6 +87,51 @@ void ItemManager::remove_handcuffs(void) {
 	this->items |= handcuff_count << HANDCUFF_SHIFT;
 }
 
+void ItemManager::add_magnifying_glass(void) {
+	int magnifying_glass_count = this->items >> MAGNIFYING_GLASS_SHIFT & 0xF;
+	assert(magnifying_glass_count < 8);
+	magnifying_glass_count++;
+	uint32_t mask = ~(0xF << MAGNIFYING_GLASS_SHIFT);
+	this->items &= mask;
+	this->items |= magnifying_glass_count << MAGNIFYING_GLASS_SHIFT;
+}
+
+void ItemManager::add_cigarette_pack(void) {
+	int cigarette_pack_count = this->items >> CIGARETTE_PACK_SHIFT & 0xF;
+	assert(cigarette_pack_count < 8);
+	cigarette_pack_count++;
+	uint32_t mask = ~(0xF << CIGARETTE_PACK_SHIFT);
+	this->items &= mask;
+	this->items |= cigarette_pack_count << CIGARETTE_PACK_SHIFT;
+}
+
+void ItemManager::add_beer(void) {
+	int beer_count = this->items >> BEER_SHIFT & 0xF;
+	assert(beer_count < 8);
+	beer_count++;
+	uint32_t mask = ~(0xF << BEER_SHIFT);
+	this->items &= mask;
+	this->items |= beer_count << BEER_SHIFT;
+}
+
+void ItemManager::add_handsaw(void) {
+	int handsaw_count = this->items >> HANDSAW_SHIFT & 0xF;
+	assert(handsaw_count < 8);
+	handsaw_count++;
+	uint32_t mask = ~(0xF << HANDSAW_SHIFT);
+	this->items &= mask;
+	this->items |= handsaw_count << HANDSAW_SHIFT;
+}
+
+void ItemManager::add_handcuffs(void) {
+	int handcuff_count = this->items >> HANDCUFF_SHIFT & 0xF;
+	assert(handcuff_count < 8);
+	handcuff_count++;
+	uint32_t mask = ~(0xF << HANDCUFF_SHIFT);
+	this->items &= mask;
+	this->items |= handcuff_count << HANDCUFF_SHIFT;
+}
+
 int ItemManager::get_item_count(void) const {
 	return (this->items >> MAGNIFYING_GLASS_SHIFT & 0xF) +
 	       (this->items >> CIGARETTE_PACK_SHIFT & 0xF) + (this->items >> BEER_SHIFT & 0xF) +
