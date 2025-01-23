@@ -19,6 +19,9 @@ Node::Node(bool is_dealer_turn, bool curr_is_live, bool curr_is_blank, uint8_t l
       player_items(player_items) {}
 
 void Node::apply_shoot_dealer_live(void) {
+	assert(this->dealer_lives > 0);
+	assert(this->live_round_count > 0);
+
 	this->dealer_lives--;
 	this->live_round_count--;
 	this->curr_is_live = false;
@@ -27,6 +30,8 @@ void Node::apply_shoot_dealer_live(void) {
 }
 
 void Node::apply_shoot_dealer_blank(void) {
+	assert(this->blank_round_count > 0);
+
 	this->blank_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
@@ -34,6 +39,9 @@ void Node::apply_shoot_dealer_blank(void) {
 }
 
 void Node::apply_shoot_player_live(void) {
+	assert(this->player_lives > 0);
+	assert(this->live_round_count > 0);
+
 	this->player_lives--;
 	this->live_round_count--;
 	this->curr_is_live = false;
@@ -42,6 +50,8 @@ void Node::apply_shoot_player_live(void) {
 }
 
 void Node::apply_shoot_player_blank(void) {
+	assert(blank_round_count > 0);
+
 	this->blank_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
@@ -49,6 +59,8 @@ void Node::apply_shoot_player_blank(void) {
 }
 
 void Node::apply_drink_beer_live(void) {
+	assert(this->live_round_count > 0);
+
 	this->live_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
@@ -81,7 +93,7 @@ void Node::apply_smoke_cigarette(void) {
 		this->dealer_items.remove_cigarette_pack();
 	}
 	else {
-		assert(this->dealer_lives < this->max_lives);
+		assert(this->player_lives < this->max_lives);
 		this->player_lives++;
 		this->player_items.remove_cigarette_pack();
 	}
@@ -263,13 +275,13 @@ float Node::expectimax(void) const {
 
 	float best_ev = std::numeric_limits<float>::lowest();
 
-	if (this->dealer_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
+	if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_drink_beer_ev(1.0f), best_ev);
 	}
-	if (this->dealer_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
 		best_ev = std::max(this->calc_smoke_cigarette_ev(1.0f), best_ev);
 	}
-	if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
+	if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
 	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_use_magnifying_glass_ev(1.0f), best_ev);
 	}
@@ -305,21 +317,21 @@ std::pair<Action, float> Node::get_best_action(void) const {
 	auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
 	    this->get_states_after_shoot();
 
-	if (this->dealer_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
+	if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
 		const float ev = this->calc_drink_beer_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
 			best_action = Action::DRINK_BEER;
 		}
 	}
-	if (this->dealer_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
 		const float ev = this->calc_smoke_cigarette_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
 			best_action = Action::SMOKE_CIGARETTE;
 		}
 	}
-	if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
+	if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
 	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
 		const float ev = this->calc_use_magnifying_glass_ev(1.0f);
 		if (ev > best_item_ev) {
