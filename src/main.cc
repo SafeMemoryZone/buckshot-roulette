@@ -58,8 +58,6 @@ ItemManager prompt_items(std::string_view prompt) {
 
 template <typename... Args>
 int prompt_num(int lower_bound, int upper_bound, Args &&...args) {
-	uint8_t num = 0;
-
 	while (true) {
 		((std::cout << std::forward<Args>(args)), ...);
 		int input;
@@ -72,12 +70,10 @@ int prompt_num(int lower_bound, int upper_bound, Args &&...args) {
 			          << " and " << upper_bound << '\n';
 		}
 		else {
-			num = input;
-			break;
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			return input;
 		}
 	}
-
-	return num;
 }
 
 int main(int argc, char **argv) {
@@ -114,8 +110,10 @@ int main(int argc, char **argv) {
 		}
 
 		uint8_t live_round_count = prompt_num(0, 8, "[PROMPT] Enter live round count (0-8): ");
-		uint8_t blank_round_count = prompt_num(live_round_count > 0 ? 0 : 1, 8 - live_round_count,
-		                                       "[PROMPT] Enter blank round count (0-8): ");
+		uint8_t blank_round_count =
+		    prompt_num(live_round_count > 0 ? 0 : 1, 8 - live_round_count,
+		               "[PROMPT] Enter blank round count (", live_round_count > 0 ? 0 : 1, "-",
+		               8 - live_round_count, "): ");
 
 		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items: ");
 		ItemManager player_items = prompt_items("[PROMPT] Enter player items: ");
@@ -125,8 +123,10 @@ int main(int argc, char **argv) {
 
 		while (!node.is_terminal()) {
 			auto [best_action, ev] = node.get_best_action();
+            break;
 		}
 	}
+	std::cout << sizeof(Node) << '\n';
 
 	return 0;
 }

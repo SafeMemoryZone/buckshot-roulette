@@ -1,6 +1,7 @@
 #ifndef EXPECTIMAX_HPP
 #define EXPECTIMAX_HPP
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 #include "item_manager.hpp"
@@ -32,27 +33,33 @@ class Node final {
 	void apply_magnify_live(void);
 	void apply_magnify_blank(void);
 
+	bool operator==(const Node &other) const;
+
    private:
 	float expectimax(void) const;
 	float eval(void) const;
 	bool is_only_live_rounds(void) const;
 	bool is_only_blank_rounds(void) const;
 	bool is_last_round(void) const;
-    std::array<Node, 4> get_states_after_shoot(void) const;
-    float calc_drink_beer_ev(float item_pickup_probability) const;
-    float calc_smoke_cigarette_ev(float item_pickup_probability) const;
-    float calc_use_magnifying_glass_ev(float item_pickup_probability) const;
+	std::array<Node, 4> get_states_after_shoot(void) const;
+	float calc_drink_beer_ev(float item_pickup_probability) const;
+	float calc_smoke_cigarette_ev(float item_pickup_probability) const;
+	float calc_use_magnifying_glass_ev(float item_pickup_probability) const;
+
+	friend struct std::hash<Node>;
+
+	ItemManager dealer_items;
+	ItemManager player_items;
+
+	uint8_t live_round_count : 4;
+	uint8_t blank_round_count : 4;
+	uint8_t max_lives : 3;
+	uint8_t dealer_lives : 3;
+	uint8_t player_lives : 3;
 
 	bool is_dealer_turn : 1;
 	bool curr_is_live : 1;
 	bool curr_is_blank : 1;
-	uint8_t live_round_count : 4;
-	uint8_t blank_round_count : 4;
-	uint8_t max_lives : 4;
-	uint8_t dealer_lives : 4;
-	uint8_t player_lives : 4;
-	ItemManager dealer_items;
-	ItemManager player_items;
 };
 
 #endif

@@ -28,6 +28,8 @@ ItemManager::ItemManager(int magnifying_glass_count, int cigarette_pack_count, i
 	              handsaw_count << HANDSAW_SHIFT | handcuff_count << HANDCUFF_SHIFT;
 }
 
+bool ItemManager::operator==(const ItemManager &other) const { return this->items == other.items; }
+
 bool ItemManager::has_magnifying_glass(void) const {
 	return (this->items >> MAGNIFYING_GLASS_SHIFT & 0xF) > 0;
 }

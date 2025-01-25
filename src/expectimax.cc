@@ -3,6 +3,11 @@
 #include <array>
 #include <cassert>
 #include <limits>
+#include <optional>
+
+#include "transposition_table.hpp"
+
+TranspositionTableManager tt_manager;
 
 Node::Node(bool is_dealer_turn, bool curr_is_live, bool curr_is_blank, uint8_t live_round_count,
            uint8_t blank_round_count, uint8_t max_lives, uint8_t dealer_lives, uint8_t player_lives,
@@ -17,6 +22,16 @@ Node::Node(bool is_dealer_turn, bool curr_is_live, bool curr_is_blank, uint8_t l
       player_lives(player_lives),
       dealer_items(dealer_items),
       player_items(player_items) {}
+
+bool Node::operator==(const Node &other) const {
+	return this->dealer_items == other.dealer_items && this->player_items == other.player_items &&
+	       this->live_round_count == other.live_round_count &&
+	       this->blank_round_count == other.blank_round_count &&
+	       this->max_lives == other.max_lives && this->dealer_lives == other.dealer_lives &&
+	       this->player_lives == other.player_lives &&
+	       this->is_dealer_turn == other.is_dealer_turn &&
+	       this->curr_is_live == other.curr_is_live && this->curr_is_blank == other.curr_is_blank;
+}
 
 void Node::apply_shoot_dealer_live(void) {
 	assert(this->dealer_lives > 0);
@@ -129,10 +144,16 @@ std::array<Node, 4> Node::get_states_after_shoot(void) const {
 	Node shoot_dealer_blank = *this;
 	Node shoot_player_blank = *this;
 
-	shoot_dealer_live.apply_shoot_dealer_live();
-	shoot_player_live.apply_shoot_player_live();
-	shoot_dealer_blank.apply_shoot_dealer_blank();
-	shoot_player_blank.apply_shoot_player_blank();
+	if (this->live_round_count > 0 && this->dealer_lives > 0) {
+		shoot_dealer_live.apply_shoot_dealer_live();
+	}
+	if (this->live_round_count > 0 && this->player_lives > 0) {
+		shoot_player_live.apply_shoot_player_live();
+	}
+	if (this->blank_round_count > 0) {
+		shoot_dealer_blank.apply_shoot_dealer_blank();
+		shoot_player_blank.apply_shoot_player_blank();
+	}
 
 	return {shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live};
 }
@@ -209,6 +230,10 @@ float Node::expectimax(void) const {
 		return this->eval();
 	}
 
+	if (std::optional<float> ev = tt_manager.get_ev(*this)) {
+		return ev.value();
+	}
+
 	const float probability_live = static_cast<float>(this->live_round_count) /
 	                               (this->live_round_count + this->blank_round_count);
 	const float probability_blank = 1.0f - probability_live;
@@ -248,6 +273,7 @@ float Node::expectimax(void) const {
 		}
 
 		if (chose_item) {
+			tt_manager.add_node(*this, ev_after_item_usage);
 			return ev_after_item_usage;
 		}
 
@@ -260,17 +286,25 @@ float Node::expectimax(void) const {
 		}
 
 		if (this->is_only_live_rounds()) {
-			return shoot_dealer_live.expectimax() * 0.5f + shoot_player_live.expectimax() * 0.5f;
+			const float ev =
+			    shoot_dealer_live.expectimax() * 0.5f + shoot_player_live.expectimax() * 0.5f;
+			tt_manager.add_node(*this, ev);
+			return ev;
 		}
 
 		if (this->is_only_blank_rounds()) {
-			return shoot_dealer_blank.expectimax() * 0.5f + shoot_player_blank.expectimax() * 0.5f;
+			const float ev =
+			    shoot_dealer_blank.expectimax() * 0.5f + shoot_player_blank.expectimax() * 0.5f;
+			tt_manager.add_node(*this, ev);
+			return ev;
 		}
 
-		return shoot_dealer_live.expectimax() * probability_live * 0.5f +
-		       shoot_dealer_blank.expectimax() * probability_blank * 0.5f +
-		       shoot_player_live.expectimax() * probability_live * 0.5f +
-		       shoot_player_blank.expectimax() * probability_blank * 0.5f;
+		const float ev = shoot_dealer_live.expectimax() * probability_live * 0.5f +
+		                 shoot_dealer_blank.expectimax() * probability_blank * 0.5f +
+		                 shoot_player_live.expectimax() * probability_live * 0.5f +
+		                 shoot_player_blank.expectimax() * probability_blank * 0.5f;
+		tt_manager.add_node(*this, ev);
+		return ev;
 	}
 
 	float best_ev = std::numeric_limits<float>::lowest();
@@ -301,6 +335,7 @@ float Node::expectimax(void) const {
 		                   best_ev);
 	}
 
+	tt_manager.add_node(*this, best_ev);
 	return best_ev;
 }
 
