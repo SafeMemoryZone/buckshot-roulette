@@ -20,6 +20,8 @@ void TranspositionTableManager::add_node(const Node &node, float ev) {
 		auto it = this->transposition_table.begin();
 		this->transposition_table.erase(it);
 	}
+
+    this->transposition_table[node] = ev;
 }
 
 std::optional<float> TranspositionTableManager::get_ev(const Node &node) {

@@ -123,7 +123,6 @@ int main(int argc, char **argv) {
 
 		while (!node.is_terminal()) {
 			auto [best_action, ev] = node.get_best_action();
-            break;
 		}
 	}
 	std::cout << sizeof(Node) << '\n';

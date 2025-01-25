@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <iostream>
 #include <limits>
 #include <optional>
 
@@ -166,6 +167,15 @@ float Node::calc_drink_beer_ev(float item_pickup_probability) const {
 	Node eject_live = *this;
 	Node eject_blank = *this;
 
+	if (this->is_only_live_rounds()) {
+		eject_live.apply_drink_beer_live();
+		return eject_live.expectimax() * item_pickup_probability;
+	}
+	if (this->is_only_blank_rounds()) {
+		eject_blank.apply_drink_beer_blank();
+		return eject_blank.expectimax() * item_pickup_probability;
+	}
+
 	eject_live.apply_drink_beer_live();
 	eject_blank.apply_drink_beer_blank();
 
@@ -186,6 +196,15 @@ float Node::calc_use_magnifying_glass_ev(float item_pickup_probability) const {
 
 	Node magnify_live = *this;
 	Node magnify_blank = *this;
+
+	if (this->is_only_live_rounds()) {
+		magnify_live.apply_magnify_live();
+		return magnify_live.expectimax() * item_pickup_probability;
+	}
+	if (this->is_only_blank_rounds()) {
+		magnify_blank.apply_magnify_blank();
+		return magnify_blank.expectimax() * item_pickup_probability;
+	}
 
 	magnify_live.apply_magnify_live();
 	magnify_blank.apply_magnify_blank();
@@ -231,6 +250,7 @@ float Node::expectimax(void) const {
 	}
 
 	if (std::optional<float> ev = tt_manager.get_ev(*this)) {
+		std::cout << "Hit\n";
 		return ev.value();
 	}
 
