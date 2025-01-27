@@ -250,7 +250,6 @@ float Node::expectimax(void) const {
 	}
 
 	if (std::optional<float> ev = tt_manager.get_ev(*this)) {
-		std::cout << "Hit\n";
 		return ev.value();
 	}
 
@@ -305,6 +304,18 @@ float Node::expectimax(void) const {
 			return shoot_dealer_blank.eval();
 		}
 
+		if (this->curr_is_live) {
+			const float ev = shoot_player_live.expectimax();
+			tt_manager.add_node(*this, ev);
+			return ev;
+		}
+
+		if (this->curr_is_blank) {
+			const float ev = shoot_dealer_blank.expectimax();
+			tt_manager.add_node(*this, ev);
+			return ev;
+		}
+
 		if (this->is_only_live_rounds()) {
 			const float ev =
 			    shoot_dealer_live.expectimax() * 0.5f + shoot_player_live.expectimax() * 0.5f;
@@ -340,11 +351,11 @@ float Node::expectimax(void) const {
 		best_ev = std::max(this->calc_use_magnifying_glass_ev(1.0f), best_ev);
 	}
 
-	if (this->is_only_live_rounds()) {
+	if (this->is_only_live_rounds() || this->curr_is_live) {
 		best_ev = std::max(shoot_dealer_live.expectimax(), best_ev);
 	}
-	else if (this->is_only_blank_rounds()) {
-		best_ev = std::max(this->eval(), best_ev);
+	else if (this->is_only_blank_rounds() || this->curr_is_blank) {
+		best_ev = std::max(shoot_player_blank.expectimax(), best_ev);
 	}
 	else {
 		best_ev = std::max(shoot_dealer_live.expectimax() * probability_live +
