@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cassert>
-#include <iostream>
 #include <limits>
 #include <optional>
 
@@ -343,7 +342,7 @@ float Node::expectimax(void) const {
 	if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_drink_beer_ev(1.0f), best_ev);
 	}
-	if (this->player_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
 		best_ev = std::max(this->calc_smoke_cigarette_ev(1.0f), best_ev);
 	}
 	if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
@@ -370,12 +369,20 @@ float Node::expectimax(void) const {
 	return best_ev;
 }
 
+bool Node::round_known_live(void) const { return this->curr_is_live; }
+
+bool Node::round_known_blank(void) const { return this->curr_is_blank; }
+
+bool Node::is_player_turn(void) const {
+    return !this->is_dealer_turn;
+}
+
 std::pair<Action, float> Node::get_best_action(void) const {
-	float best_item_ev = std::numeric_limits<float>::lowest();
 	Action best_action = Action::SHOOT_DEALER;
 
 	float shoot_player_ev = std::numeric_limits<float>::lowest();
 	float shoot_dealer_ev = std::numeric_limits<float>::lowest();
+	float best_item_ev = std::numeric_limits<float>::lowest();
 
 	const float probability_live = static_cast<float>(this->live_round_count) /
 	                               (this->live_round_count + this->blank_round_count);
@@ -390,7 +397,7 @@ std::pair<Action, float> Node::get_best_action(void) const {
 			best_action = Action::DRINK_BEER;
 		}
 	}
-	if (this->player_items.has_cigarette_pack() && this->dealer_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
 		const float ev = this->calc_smoke_cigarette_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
@@ -406,11 +413,11 @@ std::pair<Action, float> Node::get_best_action(void) const {
 		}
 	}
 
-	if (this->is_only_live_rounds()) {
+	if (this->is_only_live_rounds() || this->curr_is_live) {
 		shoot_dealer_ev = shoot_dealer_live.expectimax();
 	}
-	else if (this->is_only_blank_rounds()) {
-		shoot_player_ev = this->eval();
+	else if (this->is_only_blank_rounds() || this->curr_is_blank) {
+		shoot_player_ev = shoot_player_blank.expectimax();
 	}
 	else {
 		shoot_dealer_ev = shoot_dealer_live.expectimax() * probability_live +

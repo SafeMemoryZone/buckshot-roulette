@@ -32,14 +32,17 @@ class Node final {
 	void apply_smoke_cigarette(void);
 	void apply_magnify_live(void);
 	void apply_magnify_blank(void);
+	bool is_only_live_rounds(void) const;
+	bool is_only_blank_rounds(void) const;
+    bool round_known_live(void) const;
+    bool round_known_blank(void) const;
+    bool is_player_turn(void) const;
 
 	bool operator==(const Node &other) const;
 
    private:
 	float expectimax(void) const;
 	float eval(void) const;
-	bool is_only_live_rounds(void) const;
-	bool is_only_blank_rounds(void) const;
 	bool is_last_round(void) const;
 	std::array<Node, 4> get_states_after_shoot(void) const;
 	float calc_drink_beer_ev(float item_pickup_probability) const;

@@ -1,9 +1,12 @@
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "expectimax.hpp"
+#include "item_manager.hpp"
 
 struct Args {
 	bool should_output_help = false;
@@ -40,7 +43,7 @@ ItemManager prompt_items(std::string_view prompt) {
 		if (curr_line == "beer") {
 			items.add_beer();
 		}
-		else if (curr_line == "cigarette") {
+		else if (curr_line == "cigarettes") {
 			items.add_cigarette_pack();
 		}
 		else if (curr_line == "magnifying glass") {
@@ -48,7 +51,7 @@ ItemManager prompt_items(std::string_view prompt) {
 		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
-			          << "'\nAvailable items: beer, cigarette, magnifying glass\n";
+			          << "'\nAvailable items: beer, cigarettes, magnifying glass\n";
 		}
 		std::getline(std::cin, curr_line);
 	}
@@ -72,6 +75,64 @@ int prompt_num(int lower_bound, int upper_bound, Args &&...args) {
 		else {
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			return input;
+		}
+	}
+}
+
+bool prompt_is_live(std::string_view prompt) {
+	std::cout << prompt;
+
+	for (;;) {
+		std::string c;
+		std::cin >> c;
+		if (c == "yes" || c == "y") {
+			return true;
+		}
+		if (c == "no" || c == "n") {
+			return false;
+		}
+		std::cout
+		    << "[ERROR] Invalid input. Please use one of the following options: y, n, yes, no\n";
+	}
+}
+
+std::string action_to_str(Action action) {
+	switch (action) {
+		case Action::SHOOT_DEALER:
+			return "shoot dealer";
+		case Action::SHOOT_PLAYER:
+			return "shoot player";
+		case Action::DRINK_BEER:
+			return "drink beer";
+		case Action::SMOKE_CIGARETTE:
+			return "smoke cigarette pack";
+		case Action::USE_MAGNIFYING_GLASS:
+			return "use magnifying glass";
+		default:
+			assert(false);
+	}
+}
+
+Action prompt_action(const std::vector<Action> &available_actions) {
+	std::cout << "[PROMPT] Select an action for the dealer:\n";
+	for (size_t i = 0; i < available_actions.size(); ++i) {
+		std::cout << "  " << i + 1 << ". " << action_to_str(available_actions[i]) << '\n';
+	}
+	std::cout << "Enter the number corresponding to the action: ";
+
+	while (true) {
+		int choice;
+		std::cin >> choice;
+
+		if (std::cin.fail() || choice < 1 || choice > static_cast<int>(available_actions.size())) {
+			std::cin.clear();
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			std::cout << "[ERROR] Invalid choice. Please enter a number between 1 and "
+			          << available_actions.size() << ": ";
+		}
+		else {
+			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			return available_actions[choice - 1];
 		}
 	}
 }
@@ -112,8 +173,8 @@ int main(int argc, char **argv) {
 		uint8_t live_round_count = prompt_num(0, 8, "[PROMPT] Enter live round count (0-8): ");
 		uint8_t blank_round_count =
 		    prompt_num(live_round_count > 0 ? 0 : 1, 8 - live_round_count,
-		               "[PROMPT] Enter blank round count (", live_round_count > 0 ? 0 : 1, "-",
-		               8 - live_round_count, "): ");
+		               "[PROMPT] Enter blank round count (", (live_round_count > 0 ? "0" : "1"),
+		               "-", std::to_string(8 - live_round_count), "): ");
 
 		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items: ");
 		ItemManager player_items = prompt_items("[PROMPT] Enter player items: ");
@@ -122,10 +183,162 @@ int main(int argc, char **argv) {
 		          player_lives, dealer_items, player_items);
 
 		while (!node.is_terminal()) {
-			auto [best_action, ev] = node.get_best_action();
+			if (node.is_player_turn()) {
+				std::cout << "[INFO] It's the player's turn!\n";
+				auto [best_action, ev] = node.get_best_action();
+
+				std::string action_str = action_to_str(best_action);
+				std::cout << "[INFO] Best action: " << action_str << " with eval " << ev << '\n';
+
+				switch (best_action) {
+					case Action::SHOOT_DEALER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_shoot_dealer_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_shoot_dealer_blank();
+							break;
+						}
+						bool is_live = prompt_is_live("Dealer damaged (y/n): ");
+						if (is_live) {
+							node.apply_shoot_dealer_live();
+						}
+						else {
+							node.apply_shoot_dealer_blank();
+						}
+					} break;
+					case Action::SHOOT_PLAYER:
+						node.apply_shoot_player_blank();
+						break;
+					case Action::DRINK_BEER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_drink_beer_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_drink_beer_blank();
+							break;
+						}
+						bool is_live = prompt_is_live("Beer ejected live round (y/n): ");
+						if (is_live) {
+							node.apply_drink_beer_live();
+						}
+						else {
+							node.apply_drink_beer_blank();
+						}
+						break;
+					}
+					case Action::SMOKE_CIGARETTE:
+						node.apply_smoke_cigarette();
+						break;
+					case Action::USE_MAGNIFYING_GLASS: {
+						bool is_live = prompt_is_live("Magnifying glass showed live round (y/n): ");
+						if (is_live) {
+							node.apply_magnify_live();
+						}
+						else {
+							node.apply_magnify_blank();
+						}
+						break;
+					}
+					default:
+						assert(false);
+				}
+			}
+			else {
+				std::cout << "[INFO] It's the dealer's turn.\n";
+
+				std::vector<Action> dealer_available_actions = {
+				    Action::SHOOT_DEALER, Action::SHOOT_PLAYER, Action::DRINK_BEER,
+				    Action::SMOKE_CIGARETTE, Action::USE_MAGNIFYING_GLASS};
+
+				Action dealer_action = prompt_action(dealer_available_actions);
+
+				switch (dealer_action) {
+					case Action::SHOOT_DEALER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_shoot_dealer_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_shoot_dealer_blank();
+							break;
+						}
+						bool is_live =
+						    prompt_is_live("[PROMPT] Player damaged by dealer's shot (y/n): ");
+						if (is_live) {
+							node.apply_shoot_dealer_live();
+						}
+						else {
+							node.apply_shoot_dealer_blank();
+						}
+					} break;
+					case Action::SHOOT_PLAYER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_shoot_player_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_shoot_player_blank();
+							break;
+						}
+						bool is_live = prompt_is_live("[PROMPT] Player damaged (y/n): ");
+						if (is_live) {
+							node.apply_shoot_player_live();
+						}
+						else {
+							node.apply_shoot_player_blank();
+						}
+						break;
+					}
+					case Action::DRINK_BEER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_drink_beer_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_drink_beer_blank();
+							break;
+						}
+						bool is_live =
+						    prompt_is_live("[PROMPT] Dealer's beer ejected live round (y/n): ");
+						if (is_live) {
+							node.apply_drink_beer_live();
+						}
+						else {
+							node.apply_drink_beer_blank();
+						}
+						break;
+					}
+					case Action::SMOKE_CIGARETTE:
+						node.apply_smoke_cigarette();
+						break;
+					case Action::USE_MAGNIFYING_GLASS: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_magnify_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_magnify_blank();
+							break;
+						}
+						bool is_live = prompt_is_live(
+						    "[PROMPT] Dealer's magnifying glass showed live round (y/n): ");
+						if (is_live) {
+							node.apply_magnify_live();
+						}
+						else {
+							node.apply_magnify_blank();
+						}
+						break;
+					}
+					default:
+						assert(false);
+				}
+			}
 		}
 	}
-	std::cout << sizeof(Node) << '\n';
 
 	return 0;
 }
