@@ -13,8 +13,8 @@ struct Args {
 
 void print_help(void) {
 	std::cout << "Usage: buckshot-roulettee [FLAGS]\n"
-	          << "  --help, --h        : Print this help message\n"
-	          << "  (No flags)         : Run the solver\n";
+	          << "  --help, --h        : Print this help message.\n"
+	          << "  (No flags)         : Run the solver.\n";
 }
 
 Args parse_cmd_args(int argc, char **argv) {
@@ -25,7 +25,7 @@ Args parse_cmd_args(int argc, char **argv) {
 			args.should_output_help = true;
 		}
 		else {
-			std::cerr << "[WARNING] Ignoring command line argument '" << curr << "'\n";
+			std::cerr << "[WARNING] Ignoring command line argument '" << curr << "'.\n";
 		}
 	}
 	return args;
@@ -50,7 +50,7 @@ ItemManager prompt_items(std::string_view prompt) {
 		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
-			          << "'\nAvailable items: beer, cigarettes, magnifying glass\n";
+			          << "'\nAvailable items: beer, cigarettes, magnifying glass.\n";
 		}
 		std::getline(std::cin, curr_line);
 	}
@@ -69,7 +69,7 @@ int prompt_num(int lower_bound, int upper_bound, Args &&...args) {
 			std::cin.clear();
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 			std::cout << "[ERROR] Invalid input. Please enter a number between " << lower_bound
-			          << " and " << upper_bound << '\n';
+			          << " and " << upper_bound << ".\n";
 		}
 		else {
 			std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -91,7 +91,7 @@ bool prompt_is_live(std::string_view prompt) {
 			return false;
 		}
 		std::cout
-		    << "[ERROR] Invalid input. Please use one of the following options: y, n, yes, no\n";
+		    << "[ERROR] Invalid input. Please use one of the following options: y, n, yes, no.\n";
 	}
 }
 
@@ -185,13 +185,13 @@ int main(int argc, char **argv) {
 			std::cout << "[INFO] " << node.get_live_round_count() << " live rounds and "
 			          << node.get_blank_round_count() << " blank rounds. Dealer has "
 			          << node.get_dealer_lives() << " lives and player has "
-			          << node.get_player_lives() << " lives\n";
+			          << node.get_player_lives() << " lives.\n";
 			if (node.is_player_turn()) {
-				std::cout << "[INFO] It's the player's turn!\n";
+				std::cout << "[INFO] It's the player's turn.\n";
 				auto [best_action, ev] = node.get_best_action();
 
 				std::string action_str = action_to_str(best_action);
-				std::cout << "[INFO] Best action: " << action_str << " with eval " << ev << '\n';
+				std::cout << "[INFO] Best action: " << action_str << " with eval " << ev << ".\n";
 
 				switch (best_action) {
 					case Action::SHOOT_DEALER: {
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
 				}
 			}
 			else {
-				std::cout << "[INFO] It's the dealer's turn\n";
+				std::cout << "[INFO] It's the dealer's turn.\n";
 
 				ItemManager dealer_items = node.get_dealer_items();
 				std::vector<Action> dealer_available_actions = {Action::SHOOT_DEALER,
