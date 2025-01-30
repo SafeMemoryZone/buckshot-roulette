@@ -37,6 +37,12 @@ class Node final {
     bool round_known_live(void) const;
     bool round_known_blank(void) const;
     bool is_player_turn(void) const;
+    ItemManager get_dealer_items(void) const;
+    ItemManager get_player_items(void) const;
+    int get_live_round_count(void);
+    int get_blank_round_count(void);
+    int get_dealer_lives(void);
+    int get_player_lives(void);
 
 	bool operator==(const Node &other) const;
 

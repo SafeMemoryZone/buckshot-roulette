@@ -20,6 +20,7 @@ class TranspositionTableManager {
 
 	void add_node(const Node &node, float ev);
 	std::optional<float> get_ev(const Node &node);
+    void clear_table(void);
 
    private:
 	std::unordered_map<Node, float> transposition_table;

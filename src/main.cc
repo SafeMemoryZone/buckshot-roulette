@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <limits>
@@ -14,8 +13,8 @@ struct Args {
 
 void print_help(void) {
 	std::cout << "Usage: buckshot-roulettee [FLAGS]\n"
-	          << "  --help, --h        : Print this help message.\n"
-	          << "  (No flags)         : Run the solver.\n";
+	          << "  --help, --h        : Print this help message\n"
+	          << "  (No flags)         : Run the solver\n";
 }
 
 Args parse_cmd_args(int argc, char **argv) {
@@ -118,7 +117,7 @@ Action prompt_action(const std::vector<Action> &available_actions) {
 	for (size_t i = 0; i < available_actions.size(); ++i) {
 		std::cout << "  " << i + 1 << ". " << action_to_str(available_actions[i]) << '\n';
 	}
-	std::cout << "Enter the number corresponding to the action: ";
+	std::cout << "[PROMPT] Enter the number corresponding to the action: ";
 
 	while (true) {
 		int choice;
@@ -183,6 +182,10 @@ int main(int argc, char **argv) {
 		          player_lives, dealer_items, player_items);
 
 		while (!node.is_terminal()) {
+			std::cout << "[INFO] " << node.get_live_round_count() << " live rounds and "
+			          << node.get_blank_round_count() << " blank rounds. Dealer has "
+			          << node.get_dealer_lives() << " lives and player has "
+			          << node.get_player_lives() << " lives\n";
 			if (node.is_player_turn()) {
 				std::cout << "[INFO] It's the player's turn!\n";
 				auto [best_action, ev] = node.get_best_action();
@@ -200,7 +203,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_dealer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("Dealer damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
 						if (is_live) {
 							node.apply_shoot_dealer_live();
 						}
@@ -220,7 +223,7 @@ int main(int argc, char **argv) {
 							node.apply_drink_beer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("Beer ejected live round (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Beer ejected live round (y/n): ");
 						if (is_live) {
 							node.apply_drink_beer_live();
 						}
@@ -233,7 +236,8 @@ int main(int argc, char **argv) {
 						node.apply_smoke_cigarette();
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
-						bool is_live = prompt_is_live("Magnifying glass showed live round (y/n): ");
+						bool is_live =
+						    prompt_is_live("[PROMPT] Magnifying glass showed live round (y/n): ");
 						if (is_live) {
 							node.apply_magnify_live();
 						}
@@ -247,11 +251,21 @@ int main(int argc, char **argv) {
 				}
 			}
 			else {
-				std::cout << "[INFO] It's the dealer's turn.\n";
+				std::cout << "[INFO] It's the dealer's turn\n";
 
-				std::vector<Action> dealer_available_actions = {
-				    Action::SHOOT_DEALER, Action::SHOOT_PLAYER, Action::DRINK_BEER,
-				    Action::SMOKE_CIGARETTE, Action::USE_MAGNIFYING_GLASS};
+				ItemManager dealer_items = node.get_dealer_items();
+				std::vector<Action> dealer_available_actions = {Action::SHOOT_DEALER,
+				                                                Action::SHOOT_PLAYER};
+
+				if (dealer_items.has_beer()) {
+					dealer_available_actions.emplace_back(Action::DRINK_BEER);
+				}
+				if (dealer_items.has_cigarette_pack()) {
+					dealer_available_actions.emplace_back(Action::SMOKE_CIGARETTE);
+				}
+				if (dealer_items.has_magnifying_glass()) {
+					dealer_available_actions.emplace_back(Action::USE_MAGNIFYING_GLASS);
+				}
 
 				Action dealer_action = prompt_action(dealer_available_actions);
 

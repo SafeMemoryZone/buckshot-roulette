@@ -21,7 +21,7 @@ void TranspositionTableManager::add_node(const Node &node, float ev) {
 		this->transposition_table.erase(it);
 	}
 
-    this->transposition_table[node] = ev;
+	this->transposition_table[node] = ev;
 }
 
 std::optional<float> TranspositionTableManager::get_ev(const Node &node) {
@@ -31,3 +31,5 @@ std::optional<float> TranspositionTableManager::get_ev(const Node &node) {
 	}
 	return std::nullopt;
 }
+
+void TranspositionTableManager::clear_table(void) { this->transposition_table.clear(); }
