@@ -29,5 +29,5 @@ cmake .. && make
 - [x] Magnifying Glass
 - [x] Cigarettes
 - [x] Beer
-- [ ] Handsaw
+- [x] Handsaw
 - [ ] Handcuffs
