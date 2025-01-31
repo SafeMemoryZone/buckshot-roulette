@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
 							break;
 						}
 						bool is_live =
-						    prompt_is_live("[PROMPT] Player damaged by dealer's shot (y/n): ");
+						    prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
 						if (is_live) {
 							node.apply_shoot_dealer_live();
 						}
