@@ -12,6 +12,7 @@ enum class Action {
 	DRINK_BEER,
 	SMOKE_CIGARETTE,
 	USE_MAGNIFYING_GLASS,
+    USE_HANDSAW,
 };
 
 class Node final {
@@ -32,6 +33,7 @@ class Node final {
 	void apply_smoke_cigarette(void);
 	void apply_magnify_live(void);
 	void apply_magnify_blank(void);
+    void apply_use_handsaw(void);
 	bool is_only_live_rounds(void) const;
 	bool is_only_blank_rounds(void) const;
     bool round_known_live(void) const;
@@ -54,6 +56,7 @@ class Node final {
 	float calc_drink_beer_ev(float item_pickup_probability) const;
 	float calc_smoke_cigarette_ev(float item_pickup_probability) const;
 	float calc_use_magnifying_glass_ev(float item_pickup_probability) const;
+    float calc_use_handsaw_ev(float item_pickup_probability) const;
 
 	friend struct std::hash<Node>;
 
@@ -69,6 +72,7 @@ class Node final {
 	bool is_dealer_turn : 1;
 	bool curr_is_live : 1;
 	bool curr_is_blank : 1;
+    bool handsaw_applied : 1;
 };
 
 #endif

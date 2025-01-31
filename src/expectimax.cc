@@ -37,10 +37,16 @@ void Node::apply_shoot_dealer_live(void) {
 	assert(this->dealer_lives > 0);
 	assert(this->live_round_count > 0);
 
-	this->dealer_lives--;
+	if (this->handsaw_applied) {
+		this->dealer_lives -= dealer_lives == 1 ? 1 : 2;
+	}
+	else {
+		this->dealer_lives--;
+	}
 	this->live_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
+	this->handsaw_applied = false;
 	this->is_dealer_turn = !this->is_dealer_turn;
 }
 
@@ -50,6 +56,7 @@ void Node::apply_shoot_dealer_blank(void) {
 	this->blank_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
+	this->handsaw_applied = false;
 	this->is_dealer_turn = true;
 }
 
@@ -57,19 +64,35 @@ void Node::apply_shoot_player_live(void) {
 	assert(this->player_lives > 0);
 	assert(this->live_round_count > 0);
 
-	this->player_lives--;
+	if (this->is_dealer_turn && this->dealer_items.has_handsaw()) {
+		this->apply_use_handsaw();
+	}
+
+	if (this->handsaw_applied) {
+		this->player_lives -= this->player_lives == 1 ? 1 : 2;
+	}
+	else {
+		this->player_lives--;
+	}
+
 	this->live_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
+	this->handsaw_applied = false;
 	this->is_dealer_turn = !this->is_dealer_turn;
 }
 
 void Node::apply_shoot_player_blank(void) {
 	assert(blank_round_count > 0);
 
+	if (this->is_dealer_turn && this->dealer_items.has_handsaw()) {
+		this->apply_use_handsaw();
+	}
+
 	this->blank_round_count--;
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
+	this->handsaw_applied = false;
 	this->is_dealer_turn = false;
 }
 
@@ -135,6 +158,17 @@ void Node::apply_magnify_blank(void) {
 	}
 	else {
 		this->player_items.remove_magnifying_glass();
+	}
+}
+
+void Node::apply_use_handsaw(void) {
+	this->handsaw_applied = true;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_handsaw();
+	}
+	else {
+		this->player_items.remove_handsaw();
 	}
 }
 
@@ -212,6 +246,12 @@ float Node::calc_use_magnifying_glass_ev(float item_pickup_probability) const {
 	       magnify_blank.expectimax() * probability_blank * item_pickup_probability;
 }
 
+float Node::calc_use_handsaw_ev(float item_pickup_probability) const {
+	Node applied_handsaw = *this;
+	applied_handsaw.apply_use_handsaw();
+	return applied_handsaw.expectimax() * item_pickup_probability;
+}
+
 bool Node::is_only_live_rounds(void) const {
 	return this->live_round_count > 0 && this->blank_round_count == 0;
 }
@@ -262,15 +302,17 @@ float Node::expectimax(void) const {
 		const float item_pickup_probability = 1.0f / this->dealer_items.get_item_count();
 		/*
 		 * The dealer AI acts as follows:
-		 * - It always knows the last round type and acts accordingly
-		 * - If it doesn't know the currect round type, it flips a coin
+		 * - It always knows the last round type and acts accordingly.
+		 * - If it doesn't know the currect round type, it flips a coin.
 		 * - Before shooting, it iterates through his items in the order they spawned (we assume the
 		 * order is random) and decides if he wants to use them.
 		 * Item usages:
-		 * - Beer: If its not the last round and he the known round (if known) isn't live
-		 * - Cigarettes: If the dealer's health is not full
+		 * - Beer: If its not the last round and he the known round (if known) isn't live.
+		 * - Cigarettes: If the dealer's health is not full.
 		 * - Magnifying Glass: If he doesn't already know the current round and it isn't the last
-		 * one
+		 * one.
+		 * - Handsaw: If the dealer knows that the current round is live and he hasn't already used
+		 * a handaw. He also uses a handsaw if he decides to shoot the player.
 		 */
 
 		bool chose_item = false;
@@ -287,6 +329,10 @@ float Node::expectimax(void) const {
 		if (this->dealer_items.has_magnifying_glass() && !this->curr_is_live &&
 		    !this->curr_is_blank && !this->is_last_round()) {
 			ev_after_item_usage += this->calc_use_magnifying_glass_ev(item_pickup_probability);
+			chose_item = true;
+		}
+		if (this->dealer_items.has_handsaw() && !this->handsaw_applied && this->curr_is_live) {
+			ev_after_item_usage += this->calc_use_handsaw_ev(item_pickup_probability);
 			chose_item = true;
 		}
 
@@ -349,6 +395,9 @@ float Node::expectimax(void) const {
 	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_use_magnifying_glass_ev(1.0f), best_ev);
 	}
+	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
+		best_ev = std::max(this->calc_use_handsaw_ev(1.0f), best_ev);
+	}
 
 	if (this->is_only_live_rounds() || this->curr_is_live) {
 		best_ev = std::max(shoot_dealer_live.expectimax(), best_ev);
@@ -383,71 +432,74 @@ int Node::get_live_round_count(void) { return this->live_round_count; }
 
 int Node::get_blank_round_count(void) { return this->blank_round_count; }
 
-int Node::get_dealer_lives(void) {
-    return this->dealer_lives;
-}
+int Node::get_dealer_lives(void) { return this->dealer_lives; }
 
-int Node::get_player_lives(void) {
-    return this->player_lives;
-}
+int Node::get_player_lives(void) { return this->player_lives; }
 
 std::pair<Action, float> Node::get_best_action(void) const {
-    tt_manager.clear_table();
-    Action best_action = Action::SHOOT_DEALER;
+	tt_manager.clear_table();
+	Action best_action = Action::SHOOT_DEALER;
 
-    float shoot_player_ev = std::numeric_limits<float>::lowest();
-    float shoot_dealer_ev = std::numeric_limits<float>::lowest();
-    float best_item_ev = std::numeric_limits<float>::lowest();
+	float shoot_player_ev = std::numeric_limits<float>::lowest();
+	float shoot_dealer_ev = std::numeric_limits<float>::lowest();
+	float best_item_ev = std::numeric_limits<float>::lowest();
 
-    const float probability_live = static_cast<float>(this->live_round_count) /
-        (this->live_round_count + this->blank_round_count);
-    const float probability_blank = 1.0f - probability_live;
-    auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
-        this->get_states_after_shoot();
+	const float probability_live = static_cast<float>(this->live_round_count) /
+	                               (this->live_round_count + this->blank_round_count);
+	const float probability_blank = 1.0f - probability_live;
+	auto [shoot_player_blank, shoot_player_live, shoot_dealer_blank, shoot_dealer_live] =
+	    this->get_states_after_shoot();
 
-    if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
-        const float ev = this->calc_drink_beer_ev(1.0f);
-        if (ev > best_item_ev) {
-            best_item_ev = ev;
-            best_action = Action::DRINK_BEER;
-        }
-    }
-    if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
-        const float ev = this->calc_smoke_cigarette_ev(1.0f);
-        if (ev > best_item_ev) {
-            best_item_ev = ev;
-            best_action = Action::SMOKE_CIGARETTE;
-        }
-    }
-    if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
-            !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
-        const float ev = this->calc_use_magnifying_glass_ev(1.0f);
-        if (ev > best_item_ev) {
-            best_item_ev = ev;
-            best_action = Action::USE_MAGNIFYING_GLASS;
-        }
-    }
+	if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
+		const float ev = this->calc_drink_beer_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::DRINK_BEER;
+		}
+	}
+	if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
+		const float ev = this->calc_smoke_cigarette_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::SMOKE_CIGARETTE;
+		}
+	}
+	if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
+	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
+		const float ev = this->calc_use_magnifying_glass_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::USE_MAGNIFYING_GLASS;
+		}
+	}
+	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
+		const float ev = this->calc_use_handsaw_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::USE_HANDSAW;
+		}
+	}
 
-    if (this->is_only_live_rounds() || this->curr_is_live) {
-        shoot_dealer_ev = shoot_dealer_live.expectimax();
-    }
-    else if (this->is_only_blank_rounds() || this->curr_is_blank) {
-        shoot_player_ev = shoot_player_blank.expectimax();
-    }
-    else {
-        shoot_dealer_ev = shoot_dealer_live.expectimax() * probability_live +
-            shoot_dealer_blank.expectimax() * probability_blank;
-        shoot_player_ev = shoot_player_live.expectimax() * probability_live +
-            shoot_player_blank.expectimax() * probability_blank;
-    }
+	if (this->is_only_live_rounds() || this->curr_is_live) {
+		shoot_dealer_ev = shoot_dealer_live.expectimax();
+	}
+	else if (this->is_only_blank_rounds() || this->curr_is_blank) {
+		shoot_player_ev = shoot_player_blank.expectimax();
+	}
+	else {
+		shoot_dealer_ev = shoot_dealer_live.expectimax() * probability_live +
+		                  shoot_dealer_blank.expectimax() * probability_blank;
+		shoot_player_ev = shoot_player_live.expectimax() * probability_live +
+		                  shoot_player_blank.expectimax() * probability_blank;
+	}
 
-    if (shoot_dealer_ev >= shoot_player_ev && shoot_dealer_ev >= best_item_ev) {
-        return std::pair<Action, float>(Action::SHOOT_DEALER, shoot_dealer_ev);
-    }
+	if (shoot_dealer_ev >= shoot_player_ev && shoot_dealer_ev >= best_item_ev) {
+		return std::pair<Action, float>(Action::SHOOT_DEALER, shoot_dealer_ev);
+	}
 
-    if (shoot_player_ev > shoot_dealer_ev && shoot_player_ev >= best_item_ev) {
-        return std::pair<Action, float>(Action::SHOOT_PLAYER, shoot_player_ev);
-    }
+	if (shoot_player_ev > shoot_dealer_ev && shoot_player_ev >= best_item_ev) {
+		return std::pair<Action, float>(Action::SHOOT_PLAYER, shoot_player_ev);
+	}
 
-    return std::pair<Action, float>(best_action, best_item_ev);
+	return std::pair<Action, float>(best_action, best_item_ev);
 }

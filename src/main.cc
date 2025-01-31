@@ -48,9 +48,12 @@ ItemManager prompt_items(std::string_view prompt) {
 		else if (curr_line == "magnifying glass") {
 			items.add_magnifying_glass();
 		}
+		else if (curr_line == "handsaw") {
+			items.add_handsaw();
+		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
-			          << "'\nAvailable items: beer, cigarettes, magnifying glass.\n";
+			          << "'\nAvailable items: beer, cigarettes, magnifying glass, handsaw.\n";
 		}
 		std::getline(std::cin, curr_line);
 	}
@@ -107,6 +110,8 @@ std::string action_to_str(Action action) {
 			return "smoke cigarette pack";
 		case Action::USE_MAGNIFYING_GLASS:
 			return "use magnifying glass";
+		case Action::USE_HANDSAW:
+			return "use handsaw";
 		default:
 			assert(false);
 	}
@@ -246,6 +251,9 @@ int main(int argc, char **argv) {
 						}
 						break;
 					}
+					case Action::USE_HANDSAW:
+						node.apply_use_handsaw();
+						break;
 					default:
 						assert(false);
 				}
@@ -265,6 +273,9 @@ int main(int argc, char **argv) {
 				}
 				if (dealer_items.has_magnifying_glass()) {
 					dealer_available_actions.emplace_back(Action::USE_MAGNIFYING_GLASS);
+				}
+				if (dealer_items.has_handsaw()) {
+					dealer_available_actions.emplace_back(Action::USE_HANDSAW);
 				}
 
 				Action dealer_action = prompt_action(dealer_available_actions);
@@ -347,6 +358,9 @@ int main(int argc, char **argv) {
 						}
 						break;
 					}
+					case Action::USE_HANDSAW:
+						node.apply_use_handsaw();
+						break;
 					default:
 						assert(false);
 				}
