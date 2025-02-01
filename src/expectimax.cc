@@ -231,11 +231,11 @@ float Node::calc_drink_beer_ev(float item_pickup_probability) const {
 	Node eject_live = *this;
 	Node eject_blank = *this;
 
-	if (this->is_only_live_rounds()) {
+	if (this->is_only_live_rounds() || this->curr_is_live) {
 		eject_live.apply_drink_beer_live();
 		return eject_live.expectimax() * item_pickup_probability;
 	}
-	if (this->is_only_blank_rounds()) {
+	if (this->is_only_blank_rounds() || this->curr_is_blank) {
 		eject_blank.apply_drink_beer_blank();
 		return eject_blank.expectimax() * item_pickup_probability;
 	}
@@ -260,6 +260,8 @@ float Node::calc_use_magnifying_glass_ev(float item_pickup_probability) const {
 
 	Node magnify_live = *this;
 	Node magnify_blank = *this;
+
+	assert(!this->curr_is_live && !this->curr_is_blank);
 
 	if (this->is_only_live_rounds()) {
 		magnify_live.apply_magnify_live();
@@ -307,8 +309,6 @@ bool Node::is_terminal(void) const {
 }
 
 float Node::eval(void) const {
-	// TODO: Improve eval
-
 	if (this->player_lives == 0) {
 		return -100;
 	}
@@ -317,7 +317,21 @@ float Node::eval(void) const {
 		return 100;
 	}
 
-	return (this->player_lives - this->dealer_lives) * 10;
+	float val = (this->player_lives - this->dealer_lives) * 10 +
+	            this->player_items.get_magnifying_glass_count() * 2.5 +
+	            this->player_items.get_cigarette_pack_count() * 3 +
+	            this->player_items.get_handsaw_count() * 2.5 +
+	            this->player_items.get_handcuffs_count() * 2 + this->player_items.get_beer_count() -
+	            this->dealer_items.get_magnifying_glass_count() * 2.5 -
+	            this->dealer_items.get_cigarette_pack_count() * 3 -
+	            this->dealer_items.get_handsaw_count() * 2.5 -
+	            this->dealer_items.get_handcuffs_count() * 2 - this->dealer_items.get_beer_count();
+
+	if (val >= 100) {
+		return 99;
+	}
+
+	return std::max<float>(val, -99);
 }
 
 float Node::expectimax(void) const {

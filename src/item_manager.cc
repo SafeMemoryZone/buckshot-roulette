@@ -31,18 +31,30 @@ ItemManager::ItemManager(int magnifying_glass_count, int cigarette_pack_count, i
 bool ItemManager::operator==(const ItemManager &other) const { return this->items == other.items; }
 
 bool ItemManager::has_magnifying_glass(void) const {
-	return (this->items >> MAGNIFYING_GLASS_SHIFT & 0xF) > 0;
+	return this->get_magnifying_glass_count() > 0;
 }
 
-bool ItemManager::has_cigarette_pack(void) const {
-	return (this->items >> CIGARETTE_PACK_SHIFT & 0xF) > 0;
+bool ItemManager::has_cigarette_pack(void) const { return this->get_cigarette_pack_count() > 0; }
+
+bool ItemManager::has_beer(void) const { return this->get_beer_count() > 0; }
+
+bool ItemManager::has_handsaw(void) const { return this->get_handsaw_count() > 0; }
+
+bool ItemManager::has_handcuffs(void) const { return this->get_handcuffs_count() > 0; }
+
+bool ItemManager::get_magnifying_glass_count(void) const {
+	return this->items >> MAGNIFYING_GLASS_SHIFT & 0xF;
 }
 
-bool ItemManager::has_beer(void) const { return (this->items >> BEER_SHIFT & 0xF) > 0; }
+bool ItemManager::get_cigarette_pack_count(void) const {
+	return this->items >> CIGARETTE_PACK_SHIFT & 0xF;
+}
 
-bool ItemManager::has_handsaw(void) const { return (this->items >> HANDSAW_SHIFT & 0xF) > 0; }
+bool ItemManager::get_beer_count(void) const { return this->items >> BEER_SHIFT & 0xF; }
 
-bool ItemManager::has_handcuffs(void) const { return (this->items >> HANDCUFF_SHIFT & 0xF) > 0; }
+bool ItemManager::get_handsaw_count(void) const { return this->items >> HANDSAW_SHIFT & 0xF; }
+
+bool ItemManager::get_handcuffs_count(void) const { return this->items >> HANDCUFF_SHIFT & 0xF; }
 
 void ItemManager::remove_magnifying_glass(void) {
 	int magnifying_glass_count = this->items >> MAGNIFYING_GLASS_SHIFT & 0xF;
