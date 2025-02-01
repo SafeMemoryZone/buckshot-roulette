@@ -2,6 +2,10 @@
 
 Expectimax solver for the game Buckshot-Roulette. This algorithm is designed to work exclusively for normal mode (it does not support "double or nothing" mode).
 
+## Note
+
+This project is under developement. The engine still has some bugs and needs to be tested.
+
 ## Quickstart
 
 Follow these steps to build and run the project:
@@ -30,4 +34,4 @@ cmake .. && make
 - [x] Cigarettes
 - [x] Beer
 - [x] Handsaw
-- [ ] Handcuffs
+- [x] Handcuffs

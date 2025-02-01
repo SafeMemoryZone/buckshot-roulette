@@ -56,7 +56,8 @@ ItemManager prompt_items(std::string_view prompt) {
 		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
-			          << "'\nAvailable items: beer, cigarettes, magnifying glass, handsaw and handcuffs.\n";
+			          << "'\nAvailable items: beer, cigarettes, magnifying glass, handsaw and "
+			             "handcuffs.\n";
 		}
 		std::getline(std::cin, curr_line);
 	}
@@ -221,9 +222,24 @@ int main(int argc, char **argv) {
 							node.apply_shoot_dealer_blank();
 						}
 					} break;
-					case Action::SHOOT_PLAYER:
-						node.apply_shoot_player_blank();
+					case Action::SHOOT_PLAYER: {
+						if (node.is_only_live_rounds() || node.round_known_live()) {
+							node.apply_shoot_player_live();
+							break;
+						}
+						if (node.is_only_blank_rounds() || node.round_known_blank()) {
+							node.apply_shoot_player_blank();
+							break;
+						}
+						bool is_live = prompt_is_live("[PROMPT] Player damaged (y/n): ");
+						if (is_live) {
+							node.apply_shoot_player_live();
+						}
+						else {
+							node.apply_shoot_player_blank();
+						}
 						break;
+					}
 					case Action::DRINK_BEER: {
 						if (node.is_only_live_rounds() || node.round_known_live()) {
 							node.apply_drink_beer_live();
