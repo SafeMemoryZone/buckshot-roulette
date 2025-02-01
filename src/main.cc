@@ -124,7 +124,7 @@ std::string action_to_str(Action action) {
 }
 
 Action prompt_action(const std::vector<Action> &available_actions) {
-	std::cout << "[PROMPT] Select an action for the dealer:\n";
+	std::cout << "\n[PROMPT] Select an action for the dealer:\n";
 	for (size_t i = 0; i < available_actions.size(); ++i) {
 		std::cout << "  " << i + 1 << ". " << action_to_str(available_actions[i]) << '\n';
 	}
@@ -186,8 +186,8 @@ int main(int argc, char **argv) {
 		               "[PROMPT] Enter blank round count (", (live_round_count > 0 ? "0" : "1"),
 		               "-", std::to_string(8 - live_round_count), "): ");
 
-		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items: ");
-		ItemManager player_items = prompt_items("[PROMPT] Enter player items: ");
+		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items (end with an empty line): ");
+		ItemManager player_items = prompt_items("[PROMPT] Enter player items (end with an empty line): ");
 
 		Node node(false, false, false, live_round_count, blank_round_count, max_lives, dealer_lives,
 		          player_lives, dealer_items, player_items);
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 				auto [best_action, ev] = node.get_best_action();
 
 				std::string action_str = action_to_str(best_action);
-				std::cout << "[INFO] Best action: " << action_str << " with eval " << ev << ".\n";
+				std::cout << "\n[INFO] Best action: " << action_str << " with eval " << ev << ".\n";
 
 				switch (best_action) {
 					case Action::SHOOT_DEALER: {
@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_dealer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Player damaged the dealer (y/n): ");
 						if (is_live) {
 							node.apply_shoot_dealer_live();
 						}
@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_player_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Player damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Player damaged himself (y/n): ");
 						if (is_live) {
 							node.apply_shoot_player_live();
 						}
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 							node.apply_drink_beer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Beer ejected live round (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Player's beer ejected a live round (y/n): ");
 						if (is_live) {
 							node.apply_drink_beer_live();
 						}
@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
 						bool is_live =
-						    prompt_is_live("[PROMPT] Magnifying glass showed live round (y/n): ");
+						    prompt_is_live("[PROMPT] Player's magnifying glass showed a live round (y/n): ");
 						if (is_live) {
 							node.apply_magnify_live();
 						}
@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_dealer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Dealer damaged himself (y/n): ");
 						if (is_live) {
 							node.apply_shoot_dealer_live();
 						}
@@ -334,7 +334,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_player_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Player damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Dealer damaged the player (y/n): ");
 						if (is_live) {
 							node.apply_shoot_player_live();
 						}
@@ -353,7 +353,7 @@ int main(int argc, char **argv) {
 							break;
 						}
 						bool is_live =
-						    prompt_is_live("[PROMPT] Dealer's beer ejected live round (y/n): ");
+						    prompt_is_live("[PROMPT] Dealer's beer ejected a live round (y/n): ");
 						if (is_live) {
 							node.apply_drink_beer_live();
 						}
@@ -366,22 +366,7 @@ int main(int argc, char **argv) {
 						node.apply_smoke_cigarette();
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
-						if (node.is_only_live_rounds() || node.round_known_live()) {
-							node.apply_magnify_live();
-							break;
-						}
-						if (node.is_only_blank_rounds() || node.round_known_blank()) {
-							node.apply_magnify_blank();
-							break;
-						}
-						bool is_live = prompt_is_live(
-						    "[PROMPT] Dealer's magnifying glass showed live round (y/n): ");
-						if (is_live) {
-							node.apply_magnify_live();
-						}
-						else {
-							node.apply_magnify_blank();
-						}
+                        node.apply_magnify_live(); // doesn't matter if it's live or blank
 						break;
 					}
 					case Action::USE_HANDSAW:
