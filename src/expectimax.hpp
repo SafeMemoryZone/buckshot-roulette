@@ -12,7 +12,8 @@ enum class Action {
 	DRINK_BEER,
 	SMOKE_CIGARETTE,
 	USE_MAGNIFYING_GLASS,
-    USE_HANDSAW,
+	USE_HANDSAW,
+	USE_HANDCUFFS,
 };
 
 class Node final {
@@ -33,18 +34,19 @@ class Node final {
 	void apply_smoke_cigarette(void);
 	void apply_magnify_live(void);
 	void apply_magnify_blank(void);
-    void apply_use_handsaw(void);
+	void apply_use_handsaw(void);
+    void apply_use_handcuffs(void);
 	bool is_only_live_rounds(void) const;
 	bool is_only_blank_rounds(void) const;
-    bool round_known_live(void) const;
-    bool round_known_blank(void) const;
-    bool is_player_turn(void) const;
-    ItemManager get_dealer_items(void) const;
-    ItemManager get_player_items(void) const;
-    int get_live_round_count(void);
-    int get_blank_round_count(void);
-    int get_dealer_lives(void);
-    int get_player_lives(void);
+	bool round_known_live(void) const;
+	bool round_known_blank(void) const;
+	bool is_player_turn(void) const;
+	ItemManager get_dealer_items(void) const;
+	ItemManager get_player_items(void) const;
+	int get_live_round_count(void);
+	int get_blank_round_count(void);
+	int get_dealer_lives(void);
+	int get_player_lives(void);
 
 	bool operator==(const Node &other) const;
 
@@ -56,7 +58,8 @@ class Node final {
 	float calc_drink_beer_ev(float item_pickup_probability) const;
 	float calc_smoke_cigarette_ev(float item_pickup_probability) const;
 	float calc_use_magnifying_glass_ev(float item_pickup_probability) const;
-    float calc_use_handsaw_ev(float item_pickup_probability) const;
+	float calc_use_handsaw_ev(float item_pickup_probability) const;
+    float calc_use_handcuffs_ev(float item_pickup_probability) const;
 
 	friend struct std::hash<Node>;
 
@@ -72,7 +75,8 @@ class Node final {
 	bool is_dealer_turn : 1;
 	bool curr_is_live : 1;
 	bool curr_is_blank : 1;
-    bool handsaw_applied : 1;
+	bool handsaw_applied : 1;
+    bool handcuffs_applied : 1;
 };
 
 #endif

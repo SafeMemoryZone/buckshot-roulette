@@ -47,7 +47,12 @@ void Node::apply_shoot_dealer_live(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
-	this->is_dealer_turn = !this->is_dealer_turn;
+	if (this->handcuffs_applied) {
+		this->handcuffs_applied = false;
+	}
+	else {
+		this->is_dealer_turn = !this->is_dealer_turn;
+	}
 }
 
 void Node::apply_shoot_dealer_blank(void) {
@@ -57,7 +62,12 @@ void Node::apply_shoot_dealer_blank(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
-	this->is_dealer_turn = true;
+	if (this->handcuffs_applied) {
+		this->handcuffs_applied = false;
+	}
+	else {
+		this->is_dealer_turn = true;
+	}
 }
 
 void Node::apply_shoot_player_live(void) {
@@ -79,7 +89,12 @@ void Node::apply_shoot_player_live(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
-	this->is_dealer_turn = !this->is_dealer_turn;
+	if (this->handcuffs_applied) {
+		this->handcuffs_applied = false;
+	}
+	else {
+		this->is_dealer_turn = !this->is_dealer_turn;
+	}
 }
 
 void Node::apply_shoot_player_blank(void) {
@@ -93,7 +108,12 @@ void Node::apply_shoot_player_blank(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
-	this->is_dealer_turn = false;
+	if (this->handcuffs_applied) {
+		this->handcuffs_applied = false;
+	}
+	else {
+		this->is_dealer_turn = false;
+	}
 }
 
 void Node::apply_drink_beer_live(void) {
@@ -169,6 +189,17 @@ void Node::apply_use_handsaw(void) {
 	}
 	else {
 		this->player_items.remove_handsaw();
+	}
+}
+
+void Node::apply_use_handcuffs(void) {
+	this->handcuffs_applied = true;
+
+	if (this->is_dealer_turn) {
+		this->dealer_items.remove_handcuffs();
+	}
+	else {
+		this->player_items.remove_handcuffs();
 	}
 }
 
@@ -252,6 +283,12 @@ float Node::calc_use_handsaw_ev(float item_pickup_probability) const {
 	return applied_handsaw.expectimax() * item_pickup_probability;
 }
 
+float Node::calc_use_handcuffs_ev(float item_pickup_probability) const {
+	Node applied_handcuffs = *this;
+	applied_handcuffs.apply_use_handcuffs();
+	return applied_handcuffs.expectimax() * item_pickup_probability;
+}
+
 bool Node::is_only_live_rounds(void) const {
 	return this->live_round_count > 0 && this->blank_round_count == 0;
 }
@@ -313,6 +350,7 @@ float Node::expectimax(void) const {
 		 * one.
 		 * - Handsaw: If the dealer knows that the current round is live and he hasn't already used
 		 * a handaw. He also uses a handsaw if he decides to shoot the player.
+		 * - Handcuffs: If the player is not already handcuffed and it's not the last round.
 		 */
 
 		bool chose_item = false;
@@ -333,6 +371,11 @@ float Node::expectimax(void) const {
 		}
 		if (this->dealer_items.has_handsaw() && !this->handsaw_applied && this->curr_is_live) {
 			ev_after_item_usage += this->calc_use_handsaw_ev(item_pickup_probability);
+			chose_item = true;
+		}
+		if (this->dealer_items.has_handcuffs() && !this->handcuffs_applied &&
+		    !this->is_last_round()) {
+			ev_after_item_usage += this->calc_use_handcuffs_ev(item_pickup_probability);
 			chose_item = true;
 		}
 
@@ -397,6 +440,9 @@ float Node::expectimax(void) const {
 	}
 	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
 		best_ev = std::max(this->calc_use_handsaw_ev(1.0f), best_ev);
+	}
+	if (this->player_items.has_handcuffs() && !this->handcuffs_applied && !this->is_last_round()) {
+		best_ev = std::max(this->calc_use_handcuffs_ev(1.0f), best_ev);
 	}
 
 	if (this->is_only_live_rounds() || this->curr_is_live) {
@@ -477,6 +523,13 @@ std::pair<Action, float> Node::get_best_action(void) const {
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
 			best_action = Action::USE_HANDSAW;
+		}
+	}
+	if (this->player_items.has_handcuffs() && !this->handcuffs_applied && !this->is_last_round()) {
+		const float ev = this->calc_use_handcuffs_ev(1.0f);
+		if (ev > best_item_ev) {
+			best_item_ev = ev;
+			best_action = Action::USE_HANDCUFFS;
 		}
 	}
 

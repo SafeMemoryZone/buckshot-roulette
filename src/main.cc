@@ -51,9 +51,12 @@ ItemManager prompt_items(std::string_view prompt) {
 		else if (curr_line == "handsaw") {
 			items.add_handsaw();
 		}
+		else if (curr_line == "handcuffs") {
+			items.add_handcuffs();
+		}
 		else {
 			std::cout << "[ERROR] Unknown item name '" << curr_line
-			          << "'\nAvailable items: beer, cigarettes, magnifying glass, handsaw.\n";
+			          << "'\nAvailable items: beer, cigarettes, magnifying glass, handsaw and handcuffs.\n";
 		}
 		std::getline(std::cin, curr_line);
 	}
@@ -112,6 +115,8 @@ std::string action_to_str(Action action) {
 			return "use magnifying glass";
 		case Action::USE_HANDSAW:
 			return "use handsaw";
+		case Action::USE_HANDCUFFS:
+			return "use handcuffs";
 		default:
 			assert(false);
 	}
@@ -254,6 +259,9 @@ int main(int argc, char **argv) {
 					case Action::USE_HANDSAW:
 						node.apply_use_handsaw();
 						break;
+					case Action::USE_HANDCUFFS:
+						node.apply_use_handcuffs();
+						break;
 					default:
 						assert(false);
 				}
@@ -277,6 +285,9 @@ int main(int argc, char **argv) {
 				if (dealer_items.has_handsaw()) {
 					dealer_available_actions.emplace_back(Action::USE_HANDSAW);
 				}
+				if (dealer_items.has_handcuffs()) {
+					dealer_available_actions.emplace_back(Action::USE_HANDCUFFS);
+				}
 
 				Action dealer_action = prompt_action(dealer_available_actions);
 
@@ -290,8 +301,7 @@ int main(int argc, char **argv) {
 							node.apply_shoot_dealer_blank();
 							break;
 						}
-						bool is_live =
-						    prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
+						bool is_live = prompt_is_live("[PROMPT] Dealer damaged (y/n): ");
 						if (is_live) {
 							node.apply_shoot_dealer_live();
 						}
@@ -360,6 +370,9 @@ int main(int argc, char **argv) {
 					}
 					case Action::USE_HANDSAW:
 						node.apply_use_handsaw();
+						break;
+					case Action::USE_HANDCUFFS:
+						node.apply_use_handcuffs();
 						break;
 					default:
 						assert(false);
