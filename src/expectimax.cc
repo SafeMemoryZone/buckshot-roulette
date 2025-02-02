@@ -37,7 +37,7 @@ void Node::apply_shoot_dealer_live(void) {
 	assert(this->dealer_lives > 0);
 	assert(this->live_round_count > 0);
 
-	if (this->handsaw_applied) {
+	if (this->handsaw_applied || this->dealer_is_fade_charge()) {
 		this->dealer_lives -= dealer_lives == 1 ? 1 : 2;
 	}
 	else {
@@ -47,11 +47,14 @@ void Node::apply_shoot_dealer_live(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
+
 	if (this->handcuffs_applied) {
 		this->handcuffs_applied = false;
+		this->handcuffs_available = false;
 	}
 	else {
 		this->is_dealer_turn = !this->is_dealer_turn;
+		this->handcuffs_available = true;
 	}
 }
 
@@ -62,12 +65,23 @@ void Node::apply_shoot_dealer_blank(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
+
 	if (this->handcuffs_applied) {
 		this->handcuffs_applied = false;
+		this->handcuffs_available = false;
 	}
 	else {
 		this->is_dealer_turn = true;
+		this->handcuffs_available = true;
 	}
+}
+
+bool Node::player_is_fade_charge(void) const {
+	return this->max_lives == 6 && this->player_lives <= 2;
+}
+
+bool Node::dealer_is_fade_charge(void) const {
+	return this->max_lives == 6 && this->dealer_lives <= 2;
 }
 
 void Node::apply_shoot_player_live(void) {
@@ -78,7 +92,7 @@ void Node::apply_shoot_player_live(void) {
 		this->apply_use_handsaw();
 	}
 
-	if (this->handsaw_applied) {
+	if (this->handsaw_applied || this->player_is_fade_charge()) {
 		this->player_lives -= this->player_lives == 1 ? 1 : 2;
 	}
 	else {
@@ -89,11 +103,14 @@ void Node::apply_shoot_player_live(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
+
 	if (this->handcuffs_applied) {
 		this->handcuffs_applied = false;
+		this->handcuffs_available = false;
 	}
 	else {
 		this->is_dealer_turn = !this->is_dealer_turn;
+		this->handcuffs_available = true;
 	}
 }
 
@@ -108,11 +125,14 @@ void Node::apply_shoot_player_blank(void) {
 	this->curr_is_live = false;
 	this->curr_is_blank = false;
 	this->handsaw_applied = false;
+
 	if (this->handcuffs_applied) {
 		this->handcuffs_applied = false;
+		this->handcuffs_available = false;
 	}
 	else {
 		this->is_dealer_turn = false;
+		this->handcuffs_available = true;
 	}
 }
 
@@ -147,11 +167,14 @@ void Node::apply_drink_beer_blank(void) {
 void Node::apply_smoke_cigarette(void) {
 	if (this->is_dealer_turn) {
 		assert(this->dealer_lives < this->max_lives);
-		this->dealer_lives++;
+		if (!this->dealer_is_fade_charge()) {
+			this->dealer_lives++;
+		}
 		this->dealer_items.remove_cigarette_pack();
 	}
 	else {
 		assert(this->player_lives < this->max_lives);
+		assert(!this->player_is_fade_charge());
 		this->player_lives++;
 		this->player_items.remove_cigarette_pack();
 	}
@@ -309,29 +332,8 @@ bool Node::is_terminal(void) const {
 }
 
 float Node::eval(void) const {
-	if (this->player_lives == 0) {
-		return -100;
-	}
-
-	if (this->dealer_lives == 0) {
-		return 100;
-	}
-
-	float val = (this->player_lives - this->dealer_lives) * 10 +
-	            this->player_items.get_magnifying_glass_count() * 2.5 +
-	            this->player_items.get_cigarette_pack_count() * 3 +
-	            this->player_items.get_handsaw_count() * 2.5 +
-	            this->player_items.get_handcuffs_count() * 2 + this->player_items.get_beer_count() -
-	            this->dealer_items.get_magnifying_glass_count() * 2.5 -
-	            this->dealer_items.get_cigarette_pack_count() * 3 -
-	            this->dealer_items.get_handsaw_count() * 2.5 -
-	            this->dealer_items.get_handcuffs_count() * 2 - this->dealer_items.get_beer_count();
-
-	if (val >= 100) {
-		return 99;
-	}
-
-	return std::max<float>(val, -99);
+	// TODO: Improve eval
+	return (this->player_lives - this->dealer_lives) * 10;
 }
 
 float Node::expectimax(void) const {
@@ -387,8 +389,8 @@ float Node::expectimax(void) const {
 			ev_after_item_usage += this->calc_use_handsaw_ev(item_pickup_probability);
 			chose_item = true;
 		}
-		if (this->dealer_items.has_handcuffs() && !this->handcuffs_applied &&
-		    !this->is_last_round()) {
+		if (this->dealer_items.has_handcuffs() && this->handcuffs_available &&
+		    !this->handcuffs_applied && !this->is_last_round()) {
 			ev_after_item_usage += this->calc_use_handcuffs_ev(item_pickup_probability);
 			chose_item = true;
 		}
@@ -445,7 +447,8 @@ float Node::expectimax(void) const {
 	if (this->player_items.has_beer() && !this->curr_is_blank && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_drink_beer_ev(1.0f), best_ev);
 	}
-	if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && !this->player_is_fade_charge() &&
+	    this->player_lives != this->max_lives) {
 		best_ev = std::max(this->calc_smoke_cigarette_ev(1.0f), best_ev);
 	}
 	if (this->player_items.has_magnifying_glass() && !this->curr_is_live && !this->curr_is_blank &&
@@ -455,7 +458,8 @@ float Node::expectimax(void) const {
 	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
 		best_ev = std::max(this->calc_use_handsaw_ev(1.0f), best_ev);
 	}
-	if (this->player_items.has_handcuffs() && !this->handcuffs_applied && !this->is_last_round()) {
+	if (this->player_items.has_handcuffs() && this->handcuffs_available &&
+	    !this->handcuffs_applied && !this->is_last_round()) {
 		best_ev = std::max(this->calc_use_handcuffs_ev(1.0f), best_ev);
 	}
 
@@ -517,7 +521,8 @@ std::pair<Action, float> Node::get_best_action(void) const {
 			best_action = Action::DRINK_BEER;
 		}
 	}
-	if (this->player_items.has_cigarette_pack() && this->player_lives != this->max_lives) {
+	if (this->player_items.has_cigarette_pack() && !this->player_is_fade_charge() &&
+	    this->player_lives != this->max_lives) {
 		const float ev = this->calc_smoke_cigarette_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
@@ -539,7 +544,8 @@ std::pair<Action, float> Node::get_best_action(void) const {
 			best_action = Action::USE_HANDSAW;
 		}
 	}
-	if (this->player_items.has_handcuffs() && !this->handcuffs_applied && !this->is_last_round()) {
+	if (this->player_items.has_handcuffs() && this->handcuffs_available &&
+	    !this->handcuffs_applied && !this->is_last_round()) {
 		const float ev = this->calc_use_handcuffs_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;

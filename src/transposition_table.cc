@@ -14,7 +14,8 @@ std::size_t std::hash<Node>::operator()(const Node &node) const {
 	       (static_cast<std::size_t>(node.curr_is_live & 0b1) << 57) |
 	       (static_cast<std::size_t>(node.curr_is_blank & 0b1) << 58) |
 	       (static_cast<std::size_t>(node.handsaw_applied & 0b1) << 59) |
-	       (static_cast<std::size_t>(node.handcuffs_applied & 0b1) << 60);
+	       (static_cast<std::size_t>(node.handcuffs_applied & 0b1) << 60) |
+	       (static_cast<std::size_t>(node.handcuffs_available & 0b1) << 61);
 }
 
 void TranspositionTableManager::add_node(const Node &node, float ev) {

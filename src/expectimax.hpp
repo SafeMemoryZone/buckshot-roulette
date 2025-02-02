@@ -60,6 +60,8 @@ class Node final {
 	float calc_use_magnifying_glass_ev(float item_pickup_probability) const;
 	float calc_use_handsaw_ev(float item_pickup_probability) const;
     float calc_use_handcuffs_ev(float item_pickup_probability) const;
+    bool player_is_fade_charge(void) const;
+    bool dealer_is_fade_charge(void) const;
 
 	friend struct std::hash<Node>;
 
@@ -77,6 +79,7 @@ class Node final {
 	bool curr_is_blank : 1;
 	bool handsaw_applied : 1;
     bool handcuffs_applied : 1;
+    bool handcuffs_available : 1;
 };
 
 #endif

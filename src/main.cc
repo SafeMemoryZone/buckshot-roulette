@@ -162,18 +162,18 @@ int main(int argc, char **argv) {
 
 		switch (round_num) {
 			case 1:
-				player_lives = prompt_num(1, 2, "[PROMPT] Enter player lives (1-2): ");
 				dealer_lives = prompt_num(1, 2, "[PROMPT] Enter dealer lives (1-2): ");
+				player_lives = prompt_num(1, 2, "[PROMPT] Enter player lives (1-2): ");
 				max_lives = 2;
 				break;
 			case 2:
-				player_lives = prompt_num(1, 4, "[PROMPT] Enter player lives (1-4): ");
 				dealer_lives = prompt_num(1, 4, "[PROMPT] Enter dealer lives (1-4): ");
+				player_lives = prompt_num(1, 4, "[PROMPT] Enter player lives (1-4): ");
 				max_lives = 4;
 				break;
 			case 3:
-				player_lives = prompt_num(1, 6, "[PROMPT] Enter player lives (1-6): ");
 				dealer_lives = prompt_num(1, 6, "[PROMPT] Enter dealer lives (1-6): ");
+				player_lives = prompt_num(1, 6, "[PROMPT] Enter player lives (1-6): ");
 				max_lives = 6;
 				break;
 			default:
