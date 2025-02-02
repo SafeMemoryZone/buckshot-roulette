@@ -21,7 +21,10 @@ Node::Node(bool is_dealer_turn, bool curr_is_live, bool curr_is_blank, uint8_t l
       dealer_lives(dealer_lives),
       player_lives(player_lives),
       dealer_items(dealer_items),
-      player_items(player_items) {}
+      player_items(player_items),
+      handsaw_applied(false),
+      handcuffs_applied(false),
+      handcuffs_available(true) {}
 
 bool Node::operator==(const Node &other) const {
 	return this->dealer_items == other.dealer_items && this->player_items == other.player_items &&
