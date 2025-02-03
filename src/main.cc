@@ -186,8 +186,10 @@ int main(int argc, char **argv) {
 		               "[PROMPT] Enter blank round count (", (live_round_count > 0 ? "0" : "1"),
 		               "-", std::to_string(8 - live_round_count), "): ");
 
-		ItemManager dealer_items = prompt_items("[PROMPT] Enter dealer items (end with an empty line): ");
-		ItemManager player_items = prompt_items("[PROMPT] Enter player items (end with an empty line): ");
+		ItemManager dealer_items =
+		    prompt_items("[PROMPT] Enter dealer items (end with an empty line): ");
+		ItemManager player_items =
+		    prompt_items("[PROMPT] Enter player items (end with an empty line): ");
 
 		Node node(false, false, false, live_round_count, blank_round_count, max_lives, dealer_lives,
 		          player_lives, dealer_items, player_items);
@@ -249,7 +251,8 @@ int main(int argc, char **argv) {
 							node.apply_drink_beer_blank();
 							break;
 						}
-						bool is_live = prompt_is_live("[PROMPT] Player's beer ejected a live round (y/n): ");
+						bool is_live =
+						    prompt_is_live("[PROMPT] Player's beer ejected a live round (y/n): ");
 						if (is_live) {
 							node.apply_drink_beer_live();
 						}
@@ -262,8 +265,8 @@ int main(int argc, char **argv) {
 						node.apply_smoke_cigarette();
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
-						bool is_live =
-						    prompt_is_live("[PROMPT] Player's magnifying glass showed a live round (y/n): ");
+						bool is_live = prompt_is_live(
+						    "[PROMPT] Player's magnifying glass showed a live round (y/n): ");
 						if (is_live) {
 							node.apply_magnify_live();
 						}
@@ -366,7 +369,7 @@ int main(int argc, char **argv) {
 						node.apply_smoke_cigarette();
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
-                        node.apply_magnify_live(); // doesn't matter if it's live or blank
+						node.apply_magnify_live();  // doesn't matter if it's live or blank
 						break;
 					}
 					case Action::USE_HANDSAW:

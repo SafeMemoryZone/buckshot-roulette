@@ -91,7 +91,7 @@ void Node::apply_shoot_player_live(void) {
 	assert(this->player_lives > 0);
 	assert(this->live_round_count > 0);
 
-	if (this->is_dealer_turn && this->dealer_items.has_handsaw()) {
+	if (this->is_dealer_turn && this->dealer_items.has_handsaw() && !this->handsaw_applied) {
 		this->apply_use_handsaw();
 	}
 
@@ -120,7 +120,7 @@ void Node::apply_shoot_player_live(void) {
 void Node::apply_shoot_player_blank(void) {
 	assert(blank_round_count > 0);
 
-	if (this->is_dealer_turn && this->dealer_items.has_handsaw()) {
+	if (this->is_dealer_turn && this->dealer_items.has_handsaw() && !this->handsaw_applied) {
 		this->apply_use_handsaw();
 	}
 
@@ -368,7 +368,7 @@ float Node::expectimax(void) const {
 		 * - Magnifying Glass: If he doesn't already know the current round and it isn't the last
 		 * one.
 		 * - Handsaw: If the dealer knows that the current round is live and he hasn't already used
-		 * a handaw. He also uses a handsaw if he decides to shoot the player.
+		 * a handsaw. He also uses a handsaw if he decides to shoot the player.
 		 * - Handcuffs: If the player is not already handcuffed and it's not the last round.
 		 */
 
@@ -458,7 +458,8 @@ float Node::expectimax(void) const {
 	    !this->is_only_live_rounds() && !this->is_only_blank_rounds()) {
 		best_ev = std::max(this->calc_use_magnifying_glass_ev(1.0f), best_ev);
 	}
-	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
+	if (this->player_items.has_handsaw() && !this->handsaw_applied &&
+	    !this->is_only_blank_rounds() && !this->curr_is_blank) {
 		best_ev = std::max(this->calc_use_handsaw_ev(1.0f), best_ev);
 	}
 	if (this->player_items.has_handcuffs() && this->handcuffs_available &&
@@ -540,7 +541,8 @@ std::pair<Action, float> Node::get_best_action(void) const {
 			best_action = Action::USE_MAGNIFYING_GLASS;
 		}
 	}
-	if (this->player_items.has_handsaw() && !this->is_only_blank_rounds() && !this->curr_is_blank) {
+	if (this->player_items.has_handsaw() && !this->handsaw_applied &&
+	    !this->is_only_blank_rounds() && !this->curr_is_blank) {
 		const float ev = this->calc_use_handsaw_ev(1.0f);
 		if (ev > best_item_ev) {
 			best_item_ev = ev;
