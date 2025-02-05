@@ -229,6 +229,11 @@ void Node::apply_use_handcuffs(void) {
 	}
 }
 
+void Node::dealer_remove_magnifying_glass(void) {
+	assert(this->is_dealer_turn);
+	this->dealer_items.remove_magnifying_glass();
+}
+
 std::array<Node, 4> Node::get_states_after_shoot(void) const {
 	Node shoot_dealer_live = *this;
 	Node shoot_player_live = *this;

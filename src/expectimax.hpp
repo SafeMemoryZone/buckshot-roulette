@@ -36,6 +36,7 @@ class Node final {
 	void apply_magnify_blank(void);
 	void apply_use_handsaw(void);
     void apply_use_handcuffs(void);
+    void dealer_remove_magnifying_glass(void);
 	bool is_only_live_rounds(void) const;
 	bool is_only_blank_rounds(void) const;
 	bool round_known_live(void) const;

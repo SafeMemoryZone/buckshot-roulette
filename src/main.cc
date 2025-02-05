@@ -186,10 +186,13 @@ int main(int argc, char **argv) {
 		               "[PROMPT] Enter blank round count (", (live_round_count > 0 ? "0" : "1"),
 		               "-", std::to_string(8 - live_round_count), "): ");
 
-		ItemManager dealer_items =
-		    prompt_items("[PROMPT] Enter dealer items (end with an empty line): ");
-		ItemManager player_items =
-		    prompt_items("[PROMPT] Enter player items (end with an empty line): ");
+		ItemManager dealer_items;
+		ItemManager player_items;
+
+		if (round_num > 1) {
+			dealer_items = prompt_items("[PROMPT] Enter dealer items (end with an empty line): ");
+			player_items = prompt_items("[PROMPT] Enter player items (end with an empty line): ");
+		}
 
 		Node node(false, false, false, live_round_count, blank_round_count, max_lives, dealer_lives,
 		          player_lives, dealer_items, player_items);
@@ -369,7 +372,7 @@ int main(int argc, char **argv) {
 						node.apply_smoke_cigarette();
 						break;
 					case Action::USE_MAGNIFYING_GLASS: {
-						node.apply_magnify_live();  // doesn't matter if it's live or blank
+						node.dealer_remove_magnifying_glass();
 						break;
 					}
 					case Action::USE_HANDSAW:
